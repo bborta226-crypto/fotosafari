@@ -1,6 +1,6 @@
 // Офлайн-режим: игра сохраняется в телефоне и открывается без интернета.
 // При выпуске новой версии игры поменяй номер ниже (v1 → v2).
-const CACHE = 'fotosafari-v1';
+const CACHE = 'fotosafari-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

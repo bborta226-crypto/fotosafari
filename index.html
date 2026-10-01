@@ -295,7 +295,7 @@
   .adult{ position:absolute; z-index:7; right:14px; top:calc(16px + env(safe-area-inset-top,0px)); background:rgba(31,42,68,.75); color:#fff; font-weight:800; font-size:13px; padding:8px 12px; border-radius:999px; }
 
   /* гид-енот */
-  .bubble{ display:flex; align-items:center; gap:10px; white-space:normal; text-align:left; line-height:1.2; padding:10px 16px 10px 10px; bottom:calc(92px + env(safe-area-inset-bottom,0px)); max-width:min(92vw, 460px); width:max-content; }
+  .bubble{ display:flex; align-items:center; gap:10px; white-space:normal; text-align:left; line-height:1.2; padding:10px 16px 10px 10px; bottom:calc(96px + env(safe-area-inset-bottom,0px)); max-width:min(92vw, 460px); width:max-content; }
   .bubble .gav{ position:relative; flex:0 0 auto; width:46px; height:46px; border-radius:50%; background:#EAF0FA; display:flex; align-items:center; justify-content:center; font-size:30px; font-family:var(--emoji); }
   .bubble .gav::after{ content:'📷'; position:absolute; right:-6px; bottom:-4px; font-size:16px; }
   .bubble.good .gav, .bubble.goldb .gav{ background:rgba(255,255,255,.35); }
@@ -307,7 +307,8 @@
   @keyframes slideUp{ from{ opacity:0; transform:translateY(20px); } }
 
   /* приманки */
-  .tray{ position:absolute; z-index:11; left:50%; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); display:flex; gap:10px; background:rgba(31,42,68,.82); padding:8px 10px; border-radius:22px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .tray{ position:relative; z-index:11; flex:0 0 auto; display:flex; justify-content:center; gap:10px; background:var(--ink); padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px)); box-shadow:0 -6px 18px rgba(0,0,0,.2); }
+  @media (max-width:420px){ .tray{ gap:8px; } .tray button{ width:50px; height:50px; font-size:28px; } }
   .tray button{ width:56px; height:56px; border-radius:18px; background:#fff; font-size:32px; font-family:var(--emoji); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 0 #C9D2E3; transition:transform .08s, opacity .2s; }
   .tray button:active{ transform:translateY(3px); box-shadow:0 1px 0 #C9D2E3; }
   .tray button.cool{ opacity:.35; }
