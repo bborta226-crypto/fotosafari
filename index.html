@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F2A44">
+<title>Фотосафари</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    --ink:#1F2A44; --ink-2:#2C3A5C; --ink-3:#3B4B73;
+    --paper:#FFFFFF; --paper-2:#F3F6FB;
+    --sun:#FFC83D; --sun-press:#D99A00; --on-sun:#3A2A00;
+    --coral:#FF6B6B; --leaf:#3BB273; --muted:#8B97B5;
+    --font:system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --hand:system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --emoji:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ } }
+  :root[data-theme="dark"]{ }
+  *,*::before,*::after{ box-sizing:inherit; -webkit-tap-highlight-color:transparent; }
+  html{ height:100%; touch-action:manipulation; scroll-padding-top:env(safe-area-inset-top,0px); }
+  body{
+    height:100%; margin:0; background:var(--ink); color:var(--paper);
+    font:16px/1.4 var(--font); overflow:hidden;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; overscroll-behavior:none;
+  }
+  button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; }
+  button:focus-visible{ outline:3px solid var(--sun); outline-offset:3px; }
+  .emoji{ font-family:var(--emoji); line-height:1; }
+
+  .screen{ position:absolute; inset:0; display:none; }
+  .screen.active{ display:flex; flex-direction:column; animation:screenIn .3s ease-out; }
+  @keyframes screenIn{ from{ opacity:0; } }
+  .scroll{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .wrap{ width:100%; max-width:720px; margin:0 auto; padding:16px 16px 32px; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:10px;
+    border-radius:22px; padding:16px 22px; font-weight:900; font-size:20px;
+    background:var(--paper); color:var(--ink); box-shadow:0 5px 0 #C9D2E3;
+    transition:transform .07s, box-shadow .07s; position:relative; overflow:hidden;
+  }
+  .btn:active{ transform:translateY(4px); box-shadow:0 1px 0 #C9D2E3; }
+  .btn.sun{ background:var(--sun); color:var(--on-sun); box-shadow:0 5px 0 var(--sun-press); }
+  .btn.sun:active{ box-shadow:0 1px 0 var(--sun-press); }
+  .btn.ghost{ background:var(--ink-2); color:var(--paper); box-shadow:0 5px 0 #121a2e; }
+  .btn.ghost:active{ box-shadow:0 1px 0 #121a2e; }
+  .btn.wide{ width:100%; }
+  .round{ width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.92); color:var(--ink); font-size:22px; font-weight:900; box-shadow:0 3px 0 rgba(0,0,0,.15); flex:0 0 auto; }
+  .round:active{ transform:translateY(2px); }
+  .top{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .top h2{ margin:0; font-size:24px; font-weight:900; flex:1; }
+  .ripple{ position:absolute; border-radius:50%; background:currentColor; opacity:.2; transform:scale(0); pointer-events:none; animation:ripple .55s ease-out forwards; }
+  @keyframes ripple{ to{ transform:scale(1); opacity:0; } }
+
+  /* ================= СЦЕНА ================= */
+  .scene{ position:relative; flex:1; overflow:hidden; isolation:isolate; background:linear-gradient(to bottom, var(--sky1), var(--sky2)); }
+  .scene .sunball{ position:absolute; right:9%; top:9%; width:13vmin; height:13vmin; max-width:90px; max-height:90px; border-radius:50%; background:#FFE066; box-shadow:0 0 0 12px rgba(255,224,102,.35), 0 0 0 26px rgba(255,224,102,.15); animation:sunPulse 4s ease-in-out infinite alternate; }
+  @keyframes sunPulse{ to{ box-shadow:0 0 0 16px rgba(255,224,102,.3), 0 0 0 34px rgba(255,224,102,.1); } }
+  .scene .cloud{ position:absolute; font-size:9vmin; opacity:.95; animation:drift linear infinite; filter:saturate(0) brightness(1.9); }
+  @keyframes drift{ from{ transform:translateX(-25vw); } to{ transform:translateX(125vw); } }
+  .scene .hills{ position:absolute; left:0; right:0; bottom:48%; height:24%; }
+  .scene .ground{ position:absolute; left:0; right:0; bottom:0; height:50%; background:linear-gradient(to bottom, var(--ground), var(--ground2)); }
+  .scene .decor{ position:absolute; transform:translateX(-50%); font-family:var(--emoji); line-height:1; pointer-events:none; }
+  .spot{ cursor:pointer; touch-action:manipulation; position:absolute; width:var(--w); height:calc(var(--w) * .9); transform:translateX(-50%) scale(var(--s)); transform-origin:50% 100%; }
+  .scene{ --a:clamp(64px, 21vmin, 132px); --w:calc(var(--a) * 1.45); }
+  .hole{ position:absolute; left:0; right:0; bottom:36%; height:120%; overflow:hidden; }
+  .animal{
+    position:absolute; left:50%; bottom:-4%; font-size:var(--a); line-height:1; padding:4px;
+    font-family:var(--emoji); transform:translate(-50%, 115%);
+    transition:transform .38s cubic-bezier(.3,1.5,.5,1);
+  }
+  .spot.up .animal{ transform:translate(-50%, 0); }
+  .spot.up .animal span{ display:inline-block; animation:peek 1.4s ease-in-out infinite; }
+  @keyframes peek{ 0%,100%{ transform:rotate(-4deg); } 50%{ transform:rotate(4deg) translateY(-3%); } }
+  .spot.caught .animal span{ animation:caught .5s ease-out; }
+  @keyframes caught{ 40%{ transform:scale(1.2) rotate(-8deg); } }
+  .spot.nope .animal span{ animation:nope .45s; }
+  @keyframes nope{ 20%{ transform:translateX(-10%) rotate(-10deg); } 45%{ transform:translateX(9%) rotate(8deg); } 70%{ transform:translateX(-5%); } }
+  .spot.hint .animal::after{
+    content:''; position:absolute; inset:-6%; border-radius:50%;
+    box-shadow:0 0 0 5px rgba(255,200,61,.9), 0 0 24px 8px rgba(255,200,61,.7);
+    animation:hintPulse .9s ease-in-out infinite alternate;
+  }
+  @keyframes hintPulse{ to{ transform:scale(1.08); opacity:.6; } }
+  .cover{ position:absolute; left:-12%; width:124%; bottom:0; height:62%; pointer-events:none; }
+  .cover svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .flash{ position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; }
+  .flyer{ position:absolute; left:0; top:0; font-family:var(--emoji); line-height:1; pointer-events:none; z-index:1; will-change:transform; }
+  .vf{ position:absolute; inset:calc(150px + env(safe-area-inset-top,0px)) 12px 12px 12px; pointer-events:none; z-index:15; }
+  .vf i{ position:absolute; width:34px; height:34px; border:4px solid rgba(255,255,255,.85); }
+  .vf i:nth-child(1){ left:0; top:0; border-right:0; border-bottom:0; border-top-left-radius:14px; }
+  .vf i:nth-child(2){ right:0; top:0; border-left:0; border-bottom:0; border-top-right-radius:14px; }
+  .vf i:nth-child(3){ left:0; bottom:0; border-right:0; border-top:0; border-bottom-left-radius:14px; }
+  .vf i:nth-child(4){ right:0; bottom:0; border-left:0; border-top:0; border-bottom-right-radius:14px; }
+  .focus{ position:absolute; width:86px; height:86px; margin:-43px 0 0 -43px; border:3px solid #FFE066; border-radius:10px; pointer-events:none; z-index:16; box-shadow:0 0 0 1px rgba(0,0,0,.15); }
+  .spot.gold .animal span{ filter:drop-shadow(0 0 10px #FFD54A) drop-shadow(0 0 4px #FFB300); }
+  .spot.gold .animal::before{ content:'✨'; position:absolute; left:-12%; top:-10%; font-size:40%; animation:spark 1s ease-in-out infinite alternate; }
+  .spot.gold .hole::after{ content:'✨'; position:absolute; right:6%; top:38%; font-family:var(--emoji); font-size:calc(var(--a) * .3); animation:spark 1.2s .3s ease-in-out infinite alternate; opacity:0; }
+  .spot.gold.up .hole::after{ opacity:1; }
+  @keyframes spark{ from{ transform:scale(.6) rotate(-20deg); opacity:.5; } to{ transform:scale(1.2) rotate(20deg); opacity:1; } }
+  .bubble.goldb{ background:linear-gradient(135deg,#FFE27A,#F5B700); color:#3A2A00; }
+
+  /* ================= МЕНЮ ================= */
+  #s-menu .scene{ position:absolute; inset:0; }
+  #s-menu .scene .spot{ --s2:1; }
+  .viewfinder{ position:absolute; inset:calc(14px + env(safe-area-inset-top,0px)) 14px auto 14px; height:46%; pointer-events:none; z-index:5; }
+  .viewfinder i{ position:absolute; width:44px; height:44px; border:5px solid rgba(255,255,255,.95); border-radius:4px; }
+  .viewfinder i:nth-child(1){ left:0; top:0; border-right:0; border-bottom:0; border-top-left-radius:18px; }
+  .viewfinder i:nth-child(2){ right:0; top:0; border-left:0; border-bottom:0; border-top-right-radius:18px; }
+  .viewfinder i:nth-child(3){ left:0; bottom:0; border-right:0; border-top:0; border-bottom-left-radius:18px; }
+  .viewfinder i:nth-child(4){ right:0; bottom:0; border-left:0; border-top:0; border-bottom-right-radius:18px; }
+  .rec{ position:absolute; left:22px; top:18px; display:flex; align-items:center; gap:8px; font-weight:900; font-size:15px; color:#fff; letter-spacing:.04em; text-shadow:0 1px 3px rgba(0,0,0,.35); }
+  .rec b{ width:12px; height:12px; border-radius:50%; background:#FF4D4D; animation:blink 1.1s steps(2) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .title{
+    position:absolute; left:0; right:0; top:calc(15% + env(safe-area-inset-top,0px)); text-align:center; z-index:6; pointer-events:none;
+    font-weight:900; font-size:clamp(44px, 12vw, 84px); line-height:.95; color:#fff; letter-spacing:-.01em;
+    text-shadow:0 4px 0 var(--ink), 0 0 2px var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -2px 0 var(--ink), -3px -2px 0 var(--ink);
+  }
+  .title span{ display:inline-block; animation:titleIn .7s cubic-bezier(.2,1.5,.4,1) both; }
+  .title span:nth-child(2){ animation-delay:.1s; }
+  @keyframes titleIn{ from{ transform:translateY(-40px) scale(.6) rotate(-6deg); opacity:0; } }
+  .title small{ display:block; font-size:clamp(16px, 4.2vw, 22px); font-weight:800; letter-spacing:0; margin-top:10px; text-shadow:0 2px 0 var(--ink), 2px 2px 0 var(--ink), -2px 2px 0 var(--ink); }
+  .panel{
+    position:absolute; left:0; right:0; bottom:0; z-index:6;
+    background:var(--ink); border-radius:30px 30px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -10px 30px rgba(0,0,0,.25);
+  }
+  .panel .in{ max-width:520px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .seg{ display:grid; grid-template-columns:1fr 1fr; gap:6px; background:var(--ink-2); padding:6px; border-radius:20px; }
+  .seg button{ border-radius:15px; padding:10px 8px; font-weight:900; font-size:16px; color:#C9D2E3; display:flex; flex-direction:column; align-items:center; line-height:1.15; }
+  .seg button small{ font-weight:700; font-size:12px; opacity:.8; }
+  .seg button.on{ background:var(--paper); color:var(--ink); }
+  .row{ display:flex; gap:10px; }
+  .row .btn{ flex:1; font-size:17px; padding:14px 12px; }
+  .toggles{ display:flex; justify-content:center; gap:8px; }
+  .toggles button{ padding:8px 14px; border-radius:14px; font-size:14px; font-weight:800; color:#C9D2E3; background:var(--ink-2); }
+  .toggles button.off{ opacity:.55; }
+
+  /* ================= КАРТА ================= */
+  #s-map{ background:radial-gradient(circle at 20% 0%, var(--ink-3), var(--ink) 60%); }
+  .habs{ display:grid; gap:14px; }
+  .trail{ display:flex; flex-direction:column; padding-bottom:20px; }
+  .stopx{ display:flex; position:relative; }
+  .stopx.l{ justify-content:flex-start; padding-left:4%; }
+  .stopx.r{ justify-content:flex-end; padding-right:4%; }
+  .road{ height:64px; margin:-6px 0; }
+  .road svg{ width:100%; height:100%; display:block; }
+  .node{ position:relative; width:160px; display:flex; flex-direction:column; align-items:center; gap:6px; animation:habIn .5s cubic-bezier(.2,1.3,.4,1) both; animation-delay:calc(var(--i) * 90ms); }
+  .node .disc{ position:relative; width:136px; height:136px; border-radius:50%; overflow:hidden; border:6px solid #fff; box-shadow:0 8px 0 rgba(0,0,0,.28), 0 0 0 10px rgba(255,255,255,.06);
+    background:linear-gradient(to bottom, var(--sky1) 0 58%, var(--ground) 58%); display:flex; align-items:flex-end; justify-content:center; transition:transform .1s; }
+  .node:active .disc{ transform:scale(.95); }
+  .node .disc .big{ font-size:76px; margin-bottom:10px; display:inline-block; animation:peek 2.2s ease-in-out infinite; }
+  .node .disc .sm{ position:absolute; font-size:34px; bottom:14px; }
+  .node .disc .sm.a{ left:10px; animation:peek 1.8s -.5s ease-in-out infinite; }
+  .node .disc .sm.b{ right:10px; animation:peek 2s -1s ease-in-out infinite; }
+  .node .lbl{ background:#fff; color:var(--ink); font-weight:900; font-size:19px; padding:5px 16px; border-radius:999px; box-shadow:0 3px 0 rgba(0,0,0,.25); }
+  .node .st{ font-size:20px; letter-spacing:2px; }
+  .node .st .off{ opacity:.25; filter:grayscale(1); }
+  .node .cnt{ font-size:13px; font-weight:800; color:#C9D2E3; }
+  .node.locked .disc{ filter:grayscale(.85) brightness(.65); }
+  .node.locked .lock{ position:absolute; top:44px; font-size:46px; z-index:3; }
+  .node.locked .cnt{ color:#8B97B5; }
+  .jeep{ position:absolute; top:70px; font-size:46px; z-index:4; animation:jeep .6s ease-in-out infinite alternate; }
+  .stopx.l .jeep{ left:calc(4% + 160px); } .stopx.r .jeep{ right:calc(4% + 160px); transform:scaleX(-1); }
+  @keyframes jeep{ to{ margin-top:-6px; } }
+  .here{ position:absolute; top:18px; background:var(--sun); color:var(--on-sun); font-weight:900; font-size:15px; padding:7px 12px; border-radius:14px; z-index:5; white-space:nowrap; animation:hereB 1s ease-in-out infinite alternate; box-shadow:0 4px 0 var(--sun-press); }
+  .stopx.l .here{ left:calc(4% + 150px); } .stopx.r .here{ right:calc(4% + 150px); }
+  @keyframes hereB{ to{ transform:translateY(-6px); } }
+  .hab{
+    position:relative; overflow:hidden; height:128px; border-radius:26px; text-align:left;
+    background:linear-gradient(to bottom, var(--sky1) 0 55%, var(--ground) 55% 100%);
+    box-shadow:0 6px 0 rgba(0,0,0,.25); color:var(--ink); padding:16px 18px;
+    animation:habIn .45s cubic-bezier(.2,1.3,.4,1) both; animation-delay:calc(var(--i) * 70ms);
+    transition:transform .08s;
+  }
+  @keyframes habIn{ from{ opacity:0; transform:translateY(24px) scale(.96); } }
+  .hab:active{ transform:scale(.97); }
+  .hab .nm{ font-weight:900; font-size:26px; line-height:1; position:relative; z-index:2; }
+  .hab .st{ margin-top:6px; font-size:22px; letter-spacing:2px; position:relative; z-index:2; }
+  .hab .cnt{ position:absolute; left:18px; bottom:14px; font-weight:800; font-size:14px; background:rgba(255,255,255,.85); padding:3px 10px; border-radius:999px; z-index:2; }
+  .hab .pics{ position:absolute; right:12px; bottom:10px; font-size:48px; display:flex; gap:2px; z-index:1; }
+  .hab .pics span{ display:inline-block; animation:peek 2s ease-in-out infinite; }
+  .hab .pics span:nth-child(2){ animation-delay:-.7s; font-size:40px; margin-top:10px; }
+  .hab .pics span:nth-child(3){ animation-delay:-1.3s; font-size:34px; margin-top:18px; }
+  .hab.locked{ filter:saturate(.25) brightness(.8); }
+  .hab.locked::after{ content:'🔒'; font-family:var(--emoji); position:absolute; right:18px; top:14px; font-size:34px; z-index:3; filter:none; }
+  .hab .lockmsg{ position:absolute; left:18px; bottom:14px; font-weight:800; font-size:13px; background:rgba(255,255,255,.9); padding:3px 10px; border-radius:999px; z-index:2; }
+
+  /* ================= ИГРА ================= */
+  #s-game .hud{
+    position:absolute; left:0; right:0; top:0; z-index:10; padding:10px 12px 0;
+    display:flex; flex-direction:column; gap:8px; pointer-events:none;
+  }
+  #s-game .hud > *{ pointer-events:auto; }
+  .hudrow{ display:flex; align-items:center; gap:10px; }
+  .task{
+    flex:1; display:flex; align-items:center; gap:12px; min-height:62px;
+    background:rgba(255,255,255,.95); color:var(--ink); border-radius:22px; padding:8px 14px 8px 10px;
+    box-shadow:0 4px 0 rgba(0,0,0,.15); cursor:pointer;
+  }
+  .task .ic{ width:50px; height:50px; border-radius:16px; background:var(--paper-2); display:flex; align-items:center; justify-content:center; font-size:36px; flex:0 0 auto; }
+  .task .tx{ font-weight:900; font-size:18px; line-height:1.15; }
+  .task .tx small{ display:block; font-weight:700; font-size:12px; color:var(--muted); }
+  .task.swap{ animation:taskSwap .5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes taskSwap{ from{ transform:scale(.8) rotate(-2deg); opacity:.3; } }
+  .film{ display:flex; gap:6px; background:rgba(31,42,68,.85); padding:6px 8px; border-radius:14px; align-self:center; }
+  .film i{ width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; font-style:normal; font-size:24px; font-family:var(--emoji); }
+  .film i.cur{ box-shadow:0 0 0 2px var(--sun); }
+  .film i.done{ background:#fff; animation:frameIn .45s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes frameIn{ from{ transform:scale(1.6); } }
+  .bubble{
+    position:absolute; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translate(-50%, 30px); opacity:0; z-index:12;
+    background:#fff; color:var(--ink); font-weight:900; font-size:19px; padding:12px 20px; border-radius:20px; box-shadow:0 6px 18px rgba(0,0,0,.2);
+    transition:transform .3s cubic-bezier(.2,1.5,.4,1), opacity .2s; white-space:nowrap; max-width:calc(100% - 24px); overflow:hidden; text-overflow:ellipsis; pointer-events:none;
+  }
+  .bubble.show{ transform:translate(-50%, 0); opacity:1; }
+  .bubble.good{ background:var(--leaf); color:#fff; }
+  .polaroid-fly{ position:fixed; z-index:40; background:#fff; padding:6px 6px 16px; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.35); font-family:var(--emoji); line-height:1; pointer-events:none; }
+  .polaroid-fly div{ background:var(--sky1, #CDEBFF); border-radius:3px; display:flex; align-items:center; justify-content:center; }
+
+  /* ================= ИТОГ ================= */
+  #s-result{ background:radial-gradient(circle at 50% 10%, var(--ink-3), var(--ink) 65%); }
+  .res-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; padding:24px 18px calc(24px + env(safe-area-inset-bottom,0px)); }
+  .res-wrap h2{ margin:0; font-size:32px; font-weight:900; }
+  .stars{ display:flex; gap:8px; font-size:64px; }
+  .stars span{ font-family:var(--emoji); display:inline-block; filter:grayscale(1) opacity(.3); }
+  .stars span.on{ filter:none; animation:starIn .6s cubic-bezier(.2,1.8,.4,1) both; }
+  @keyframes starIn{ from{ transform:scale(0) rotate(-120deg); } }
+  .fan{ display:flex; justify-content:center; flex-wrap:wrap; gap:10px; max-width:560px; }
+  .res-btns{ display:flex; gap:10px; width:100%; max-width:520px; }
+  .res-btns .btn{ flex:1; font-size:17px; padding:14px 10px; }
+  .newtag{ font-weight:800; color:var(--sun); }
+
+  /* ================= ПОЛАРОИДЫ / АЛЬБОМ ================= */
+  .pola{
+    background:#fff; color:var(--ink); padding:7px 7px 6px; border-radius:6px; box-shadow:0 6px 14px rgba(0,0,0,.28);
+    transform:rotate(var(--r, 0deg)); transition:transform .2s; display:flex; flex-direction:column; align-items:center;
+  }
+  .pola .ph{ width:100%; aspect-ratio:1; border-radius:3px; display:flex; align-items:center; justify-content:center; background:linear-gradient(to bottom, var(--sky1) 0 62%, var(--ground) 62%); font-family:var(--emoji); line-height:1; }
+  .pola .cap{ font-family:var(--hand); font-weight:800; font-size:17px; line-height:1.1; margin-top:4px; min-height:24px; text-align:center; }
+  .fan .pola{ width:96px; animation:polaIn .5s cubic-bezier(.2,1.4,.4,1) both; animation-delay:calc(.5s + var(--i) * 90ms); }
+  .fan .pola .ph{ font-size:52px; animation:develop 1.8s ease-out both; animation-delay:calc(.7s + var(--i) * 140ms); }
+  @keyframes develop{ from{ filter:grayscale(1) brightness(1.9) contrast(.5) blur(2px); } 60%{ filter:grayscale(.3) brightness(1.15) contrast(.9); } }
+  .pola.goldf{ background:linear-gradient(135deg,#FFE9A6,#F5B700 45%,#FFE27A 70%,#E0A100); }
+  .pola.goldf .cap::after{ content:' ✨'; font-family:var(--emoji); font-size:.7em; }
+  .fan .pola .cap{ font-size:14px; }
+  @keyframes polaIn{ from{ opacity:0; transform:translateY(40px) rotate(0deg) scale(.7); } }
+  #s-album{ background:var(--ink); }
+  .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .tab{ padding:9px 14px; border-radius:999px; background:var(--ink-2); color:#C9D2E3; font-weight:900; font-size:15px; }
+  .tab.on{ background:var(--sun); color:var(--on-sun); }
+  .agrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:18px 14px; }
+  .agrid .pola{ cursor:pointer; animation:polaIn .4s cubic-bezier(.2,1.3,.4,1) both; animation-delay:calc(var(--i) * 40ms); }
+  .agrid .pola:active{ transform:rotate(0deg) scale(.96); }
+  .agrid .pola .ph{ font-size:64px; }
+  .agrid .pola.locked .ph{ background:#E3E8F2; }
+  .agrid .pola.locked .ph span{ filter:brightness(0) opacity(.18); }
+  .agrid .pola.locked .cap{ color:#AAB4C8; }
+  .aprog{ height:12px; background:var(--ink-2); border-radius:6px; overflow:hidden; margin:-6px 0 16px; }
+  .aprog i{ display:block; height:100%; background:var(--sun); border-radius:6px; width:0; transition:width .8s cubic-bezier(.2,.9,.3,1); }
+
+  .modal-back{ position:fixed; inset:0; background:rgba(10,16,30,.6); z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .modal-back.open{ opacity:1; pointer-events:auto; }
+  .modal{
+    position:fixed; left:50%; top:50%; z-index:51; width:min(92vw, 400px);
+    transform:translate(-50%,-50%) scale(.6); opacity:0; pointer-events:none; transition:transform .35s cubic-bezier(.2,1.4,.4,1), opacity .2s;
+  }
+  .modal.open{ transform:translate(-50%,-50%) scale(1); opacity:1; pointer-events:auto; }
+  .modal .pola{ --r:-2deg; padding:12px 12px 14px; }
+  .modal .pola .ph{ font-size:128px; }
+  .modal .pola .cap{ font-size:28px; }
+  .modal .fact{ color:var(--ink); font-weight:700; font-size:17px; line-height:1.4; text-align:left; margin:8px 4px 4px; }
+  .modal .fact b{ display:block; font-size:13px; color:var(--muted); font-weight:800; margin-bottom:2px; }
+  .modal .mbtns{ display:flex; gap:10px; margin-top:14px; }
+  .modal .mbtns .btn{ flex:1; font-size:17px; padding:13px 10px; }
+
+  .toast{ position:fixed; left:50%; top:calc(12px + env(safe-area-inset-top,0px)); transform:translate(-50%,-160%); z-index:60; background:var(--sun); color:var(--on-sun); font-weight:900; padding:12px 20px; border-radius:18px; box-shadow:0 8px 24px rgba(0,0,0,.3); transition:transform .45s cubic-bezier(.2,1.5,.4,1); pointer-events:none; max-width:calc(100% - 24px); text-align:center; }
+  .toast.show{ transform:translate(-50%,0); }
+  .confetti{ position:fixed; top:0; left:0; width:10px; height:14px; border-radius:2px; z-index:45; pointer-events:none; }
+
+  /* меню: мини-режимы и кнопка для взрослых */
+  .minis{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .minis button{ background:var(--ink-2); border-radius:18px; padding:10px 4px 9px; display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; box-shadow:0 4px 0 #121a2e; position:relative; overflow:hidden; }
+  .minis button:active{ transform:translateY(3px); box-shadow:0 1px 0 #121a2e; }
+  .minis .emoji{ font-size:28px; }
+  .minis b{ font-size:14px; font-weight:900; }
+  .adult{ position:absolute; z-index:7; right:14px; top:calc(16px + env(safe-area-inset-top,0px)); background:rgba(31,42,68,.75); color:#fff; font-weight:800; font-size:13px; padding:8px 12px; border-radius:999px; }
+
+  /* гид-енот */
+  .bubble{ display:flex; align-items:center; gap:10px; white-space:normal; text-align:left; line-height:1.2; padding:10px 16px 10px 10px; bottom:calc(92px + env(safe-area-inset-bottom,0px)); max-width:min(92vw, 460px); width:max-content; }
+  .bubble .gav{ position:relative; flex:0 0 auto; width:46px; height:46px; border-radius:50%; background:#EAF0FA; display:flex; align-items:center; justify-content:center; font-size:30px; font-family:var(--emoji); }
+  .bubble .gav::after{ content:'📷'; position:absolute; right:-6px; bottom:-4px; font-size:16px; }
+  .bubble.good .gav, .bubble.goldb .gav{ background:rgba(255,255,255,.35); }
+  .bubble.show .gav{ animation:guideHop .5s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes guideHop{ 40%{ transform:translateY(-8px) rotate(-8deg); } }
+  .guide-line{ display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.95); color:var(--ink); border-radius:20px; padding:10px 16px 10px 10px; max-width:520px; text-align:left; font-weight:800; font-size:16px; line-height:1.3; animation:slideUp .5s .3s cubic-bezier(.2,1.3,.4,1) both; }
+  .guide-line .gav{ position:relative; flex:0 0 auto; width:52px; height:52px; border-radius:50%; background:#EAF0FA; display:flex; align-items:center; justify-content:center; font-size:34px; font-family:var(--emoji); }
+  .guide-line .gav::after{ content:'📷'; position:absolute; right:-6px; bottom:-4px; font-size:18px; }
+  @keyframes slideUp{ from{ opacity:0; transform:translateY(20px); } }
+
+  /* приманки */
+  .tray{ position:absolute; z-index:11; left:50%; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); display:flex; gap:10px; background:rgba(31,42,68,.82); padding:8px 10px; border-radius:22px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .tray button{ width:56px; height:56px; border-radius:18px; background:#fff; font-size:32px; font-family:var(--emoji); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 0 #C9D2E3; transition:transform .08s, opacity .2s; }
+  .tray button:active{ transform:translateY(3px); box-shadow:0 1px 0 #C9D2E3; }
+  .tray button.cool{ opacity:.35; }
+  .tray .lbl{ color:#fff; font-weight:900; font-size:12px; writing-mode:vertical-rl; transform:rotate(180deg); opacity:.7; align-self:center; }
+  .food-fly{ position:fixed; z-index:30; font-family:var(--emoji); font-size:40px; line-height:1; pointer-events:none; }
+  .spot .yum{ position:absolute; left:50%; bottom:58%; transform:translateX(-50%); font-family:var(--emoji); font-size:calc(var(--a) * .38); z-index:3; pointer-events:none; animation:yum 1.2s ease-out forwards; }
+  @keyframes yum{ 0%{ opacity:0; transform:translate(-50%, 20px) scale(.5); } 25%{ opacity:1; transform:translate(-50%,0) scale(1.1); } 100%{ opacity:0; transform:translate(-50%,-30px) scale(.8); } }
+  .spot.gold.up .animal span{ animation:dance .7s ease-in-out infinite; }
+  @keyframes dance{ 0%,100%{ transform:rotate(-12deg) translateY(0); } 25%{ transform:rotate(0) translateY(-14%); } 50%{ transform:rotate(12deg) translateY(0); } 75%{ transform:rotate(0) translateY(-10%); } }
+  .film.free i{ display:none; }
+  .film .cntx{ color:#fff; font-weight:900; font-size:15px; padding:2px 8px; display:none; }
+  .film.free .cntx{ display:block; }
+
+  /* итог */
+  .moonbtn{ color:#C9D2E3; font-weight:900; font-size:16px; padding:10px 16px; border-radius:16px; background:rgba(255,255,255,.06); }
+
+  /* «Кто там?» */
+  #s-peek .peektop, #s-night .peektop{ position:absolute; left:0; right:0; top:0; z-index:10; display:flex; align-items:center; gap:10px; padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0; pointer-events:none; }
+  .peektop > *{ pointer-events:auto; }
+  .peektop .pill2{ background:rgba(255,255,255,.95); color:var(--ink); font-weight:900; font-size:18px; padding:10px 16px; border-radius:18px; box-shadow:0 4px 0 rgba(0,0,0,.15); }
+  .spot.bigspot{ --s:1.9 !important; }
+  .spot.bigspot.wait .cover{ animation:bushShake .5s ease-in-out infinite; }
+  @keyframes bushShake{ 0%,100%{ transform:rotate(0); } 25%{ transform:rotate(-3deg) translateX(-2%); } 75%{ transform:rotate(3deg) translateX(2%); } }
+  .qmark{ position:absolute; z-index:12; left:50%; transform:translateX(-50%); bottom:46%; background:#fff; color:var(--ink); font-weight:900; font-size:44px; width:78px; height:78px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 0 rgba(0,0,0,.15); animation:qb 1s ease-in-out infinite alternate; }
+  .qmark::after{ content:''; position:absolute; bottom:-12px; left:50%; margin-left:-10px; border:10px solid transparent; border-top-color:#fff; border-bottom:0; }
+  @keyframes qb{ to{ transform:translateX(-50%) translateY(-10px) rotate(4deg); } }
+  .qmark.hide{ display:none; }
+
+  /* ночь */
+  #nightScene{ position:absolute; inset:0; overflow:hidden; background:linear-gradient(to bottom, #0B1638, #233572 60%, #2E4A86); touch-action:none; isolation:isolate; }
+  #nightScene .stars i{ position:absolute; width:3px; height:3px; border-radius:50%; background:#fff; animation:tw 2.4s ease-in-out infinite alternate; }
+  @keyframes tw{ from{ opacity:.2; transform:scale(.6); } to{ opacity:1; transform:scale(1.2); } }
+  #nightScene .moon{ position:absolute; right:10%; top:12%; font-size:min(110px, 22vmin); font-family:var(--emoji); filter:drop-shadow(0 0 24px rgba(255,236,150,.6)); animation:moon 6s ease-in-out infinite alternate; }
+  @keyframes moon{ to{ transform:rotate(-8deg) translateY(-6px); } }
+  #nightScene .nhills{ position:absolute; left:0; right:0; bottom:38%; height:22%; }
+  #nightScene .nground{ position:absolute; left:0; right:0; bottom:0; height:40%; background:linear-gradient(#1E4A3A, #143528); }
+  .sleeper{ position:absolute; transform:translateX(-50%); font-family:var(--emoji); line-height:1; font-size:clamp(70px, 20vmin, 130px); cursor:grab; transition:filter .6s, transform .6s; }
+  .sleeper span{ display:inline-block; animation:sway 2.6s ease-in-out infinite; }
+  @keyframes sway{ 50%{ transform:rotate(4deg) translateY(-3%); } }
+  .sleeper.asleep{ filter:brightness(.55) saturate(.7); transform:translateX(-50%) rotate(-10deg) translateY(10%) scale(.92); }
+  .sleeper.asleep span{ animation:breath 3s ease-in-out infinite; }
+  @keyframes breath{ 50%{ transform:scale(1.03, .97); } }
+  .sleeper .zz{ position:absolute; right:-8%; top:-18%; font-size:34%; animation:zz 2.2s ease-in-out infinite; opacity:0; }
+  .sleeper.asleep .zz{ opacity:1; }
+  @keyframes zz{ 0%{ transform:translate(0,10px) scale(.7); opacity:0; } 30%{ opacity:1; } 100%{ transform:translate(18px,-30px) scale(1.1); opacity:0; } }
+  .heart{ position:fixed; z-index:30; font-family:var(--emoji); font-size:26px; pointer-events:none; }
+  .night-ui{ position:absolute; left:0; right:0; bottom:calc(18px + env(safe-area-inset-bottom,0px)); z-index:12; display:flex; flex-direction:column; align-items:center; gap:10px; padding:0 16px; text-align:center; }
+  .night-ui .hint{ color:#DCE6FF; font-weight:800; font-size:17px; background:rgba(10,20,50,.55); padding:10px 16px; border-radius:16px; }
+  .night-ui .btns{ display:none; gap:10px; width:100%; max-width:440px; }
+  .night-ui.done .btns{ display:flex; }
+  .night-ui .btns .btn{ flex:1; font-size:17px; padding:14px 8px; }
+  .shooting{ position:absolute; width:120px; height:2px; background:linear-gradient(90deg, #fff, transparent); border-radius:2px; z-index:2; pointer-events:none; }
+
+  /* родительский замок и раздел */
+  .gate{ position:fixed; inset:0; z-index:70; background:rgba(10,16,30,.8); display:none; align-items:center; justify-content:center; padding:20px; }
+  .gate.open{ display:flex; }
+  .gate .box{ background:#fff; color:var(--ink); border-radius:24px; padding:22px; max-width:360px; width:100%; text-align:center; }
+  .gate h3{ margin:0 0 6px; font-size:22px; }
+  .gate p{ margin:0 0 16px; color:#56627F; font-weight:700; }
+  .holdbtn{ position:relative; overflow:hidden; width:100%; padding:18px; border-radius:18px; background:var(--ink); color:#fff; font-weight:900; font-size:18px; touch-action:none; }
+  .holdbtn i{ position:absolute; left:0; top:0; bottom:0; width:0; background:var(--sun); opacity:.9; }
+  .holdbtn span{ position:relative; }
+  .gate .cancel{ margin-top:10px; color:#56627F; font-weight:800; padding:8px; }
+  #s-parent{ background:var(--ink); }
+  .pcard{ background:var(--ink-2); border-radius:20px; padding:16px; margin-bottom:14px; }
+  .pcard h3{ margin:0 0 8px; font-size:18px; }
+  .pcard p{ margin:0 0 8px; color:#C9D2E3; font-weight:700; line-height:1.45; }
+  .pcard .rowx{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pcard .rowx button{ padding:10px 14px; border-radius:14px; background:var(--ink-3); font-weight:900; }
+  .pcard .rowx button.on{ background:var(--sun); color:var(--on-sun); }
+  .pcard .danger{ background:#5A2C3A !important; color:#FFD0D0; }
+  .pcard .danger.armed{ background:var(--coral) !important; color:#fff; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+    .spot.up .animal{ transform:translate(-50%,0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- МЕНЮ -->
+<section class="screen active" id="s-menu">
+  <div class="scene" id="menuScene"></div>
+  <div class="viewfinder" aria-hidden="true"><i></i><i></i><i></i><i></i><div class="rec"><b></b>REC</div></div>
+  <h1 class="title"><span>Фото</span><span>сафари</span><small>Найди и сфотографируй животных</small></h1>
+  <button class="adult" id="adultBtn">⚙ Взрослым</button>
+  <div class="panel">
+    <div class="in">
+      <div class="seg" role="radiogroup" aria-label="Уровень">
+        <button id="modeKid" role="radio">Малыш<small>3–5 лет</small></button>
+        <button id="modePro" role="radio">Знаток<small>6–9 лет</small></button>
+      </div>
+      <button class="btn sun wide" id="playBtn" style="font-size:24px;padding:16px">📸 Фотоохота</button>
+      <div class="minis">
+        <button data-go="peek"><span class="emoji">🔊</span><b>Кто там?</b></button>
+        <button id="freeBtn"><span class="emoji">🌳</span><b>Прогулка</b></button>
+        <button id="nightBtn"><span class="emoji">🌙</span><b>Спать</b></button>
+      </div>
+      <div class="row">
+        <button class="btn ghost" data-go="album">📔 Альбом <span id="albumCount" style="opacity:.75;font-size:15px"></span></button>
+      </div>
+      <div class="toggles">
+        <button id="voiceBtn">🗣 Голос</button>
+        <button id="soundBtn">🔊 Звук</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- КАРТА -->
+<section class="screen scroll" id="s-map">
+  <div class="wrap">
+    <div class="top"><button class="round" data-back aria-label="Назад">←</button><h2 id="mapTitle">Куда поедем?</h2></div>
+    <div class="trail" id="habs"></div>
+  </div>
+</section>
+
+<!-- ИГРА -->
+<section class="screen" id="s-game">
+  <div class="scene" id="gameScene"></div>
+  <div class="hud">
+    <div class="hudrow">
+      <button class="round" data-back aria-label="Выйти">←</button>
+      <div class="task" id="task" role="button" aria-label="Повторить задание"><div class="ic emoji" id="taskIc"></div><div class="tx" id="taskTx"></div></div>
+    </div>
+    <div class="film" id="film"></div>
+  </div>
+  <div class="bubble" id="bubble"><span class="gav">🦝</span><span class="bt" id="bubbleTx"></span></div>
+  <div class="tray" id="tray"></div>
+</section>
+
+<!-- КТО ТАМ? -->
+<section class="screen" id="s-peek">
+  <div class="scene" id="peekScene"></div>
+  <div class="peektop"><button class="round" data-back aria-label="Выйти">←</button><div class="pill2">🔊 Кто там?</div><div style="flex:1"></div><button class="round" id="peekRepeat" aria-label="Повторить">🔁</button></div>
+  <div class="bubble" id="peekBubble"><span class="gav">🦝</span><span class="bt" id="peekBubbleTx"></span></div>
+</section>
+
+<!-- СПОКОЙНОЙ НОЧИ -->
+<section class="screen" id="s-night">
+  <div id="nightScene"></div>
+  <div class="peektop"><button class="round" data-back aria-label="Выйти">←</button><div class="pill2">🌙 Спокойной ночи</div></div>
+  <div class="night-ui" id="nightUi">
+    <div class="hint" id="nightHint">Погладь каждого пальчиком, чтобы он уснул</div>
+    <div class="btns"><button class="btn ghost" id="nightMenu">В меню</button><button class="btn sun" id="nightAgain">Ещё раз</button></div>
+  </div>
+</section>
+
+<!-- ДЛЯ ВЗРОСЛЫХ -->
+<section class="screen scroll" id="s-parent">
+  <div class="wrap">
+    <div class="top"><button class="round" data-back aria-label="Назад">←</button><h2>Для взрослых</h2></div>
+    <div class="pcard"><h3>Об игре</h3><p>«Фотосафари» — спокойная игра для детей 3–9 лет: ребёнок находит и «фотографирует» животных, слушает их названия, голоса и забавные факты. Без рекламы, покупок и сбора данных. Работает без интернета после первого запуска.</p></div>
+    <div class="pcard"><h3>Прогресс</h3><p id="pStats"></p></div>
+    <div class="pcard"><h3>Уровень</h3><p>«Малыш» — подсказки картинкой, все места открыты, животные сидят дольше. «Знаток» — загадки, места открываются по очереди.</p>
+      <div class="rowx"><button id="pKid">Малыш 3–5</button><button id="pPro">Знаток 6–9</button></div></div>
+    <div class="pcard"><h3>Звук</h3><div class="rowx"><button id="pVoice">Голос</button><button id="pSound">Звуки</button></div></div>
+    <div class="pcard"><h3>Сброс</h3><p>Удалит все фото из альбома, звёзды и золотые снимки на этом устройстве.</p><div class="rowx"><button class="danger" id="pReset">Сбросить прогресс</button></div></div>
+  </div>
+</section>
+
+<div class="gate" id="gate"><div class="box"><h3>Для взрослых</h3><p>Нажми и держи кнопку 3 секунды</p>
+  <button class="holdbtn" id="holdBtn"><i></i><span>Держать</span></button>
+  <button class="cancel" id="gateCancel">Отмена</button></div></div>
+
+<!-- ИТОГ -->
+<section class="screen" id="s-result">
+  <div class="res-wrap scroll">
+    <h2 id="resTitle">Отличная прогулка!</h2>
+    <div class="stars" id="stars"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+    <div class="newtag" id="newTag"></div>
+    <div class="guide-line"><span class="gav">🦝</span><span id="resGuide"></span></div>
+    <div class="fan" id="fan"></div>
+    <div class="res-btns">
+      <button class="btn ghost" id="againBtn">↻ Ещё раз</button>
+      <button class="btn sun" id="nextBtn">Дальше</button>
+    </div>
+    <button class="moonbtn" id="resNight">🌙 Уложить этих животных спать</button>
+  </div>
+</section>
+
+<!-- АЛЬБОМ -->
+<section class="screen scroll" id="s-album">
+  <div class="wrap">
+    <div class="top"><button class="round" data-back aria-label="Назад">←</button><h2>Мой фотоальбом</h2><span style="font-weight:900" id="albumTop"></span></div>
+    <div class="aprog"><i id="aprog"></i></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="agrid" id="agrid"></div>
+  </div>
+</section>
+
+<div class="modal-back" id="modalBack"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const rnd = (a,b) => Math.random()*(b-a)+a;
+  const ri = (a,b) => Math.floor(rnd(a,b+1));
+  const pick = arr => arr[ri(0, arr.length-1)];
+  const shuffle = arr => { const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j=ri(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function load(k,d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+  function save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+
+  /* ================= ДАННЫЕ ================= */
+  const HABS = [
+    { id:'farm', name:'Ферма', sky:['#9FE3FF','#E8F9FF'], hills:['#B5E48C','#99D98C'], ground:['#7CC152','#6AB043'], cover:'hay',
+      decor:[['🏡',16,'58%',96],['🌻',86,'60%',54],['🌻',93,'59%',44],['🚜',70,'61%',56]] },
+    { id:'forest', name:'Лес', sky:['#BDE8FF','#F1FBFF'], hills:['#6BBF7F','#4E9F66'], ground:['#4E9A5F','#3E8550'], cover:'bush',
+      decor:[['🌲',10,'56%',110],['🌲',24,'58%',80],['🌳',78,'57%',100],['🌲',92,'58%',86],['🍄',56,'62%',34]] },
+    { id:'savanna', name:'Саванна', sky:['#FFD59E','#FFF4E0'], hills:['#EBC57A','#DDB05A'], ground:['#D9B465','#C9A04E'], cover:'grass',
+      decor:[['🌳',14,'58%',96],['🌳',84,'59%',74],['⛰️',50,'60%',70]] },
+    { id:'jungle', name:'Джунгли', sky:['#9EE6C9','#E6FFF5'], hills:['#3FAF7A','#2E9466'], ground:['#2F8F5E','#27784E'], cover:'leaves',
+      decor:[['🌴',9,'55%',116],['🌴',91,'56%',108],['🌺',30,'61%',38],['🌿',68,'61%',48]] },
+    { id:'ocean', name:'Океан', sky:['#8FD8FF','#E3F7FF'], hills:['#6FCBEF','#57B8E3'], ground:['#2E97D8','#1F7FC0'], cover:'wave',
+      decor:[['⛵',22,'60%',58],['🏝️',80,'59%',84],['🐚',55,'63%',30]] }
+  ];
+  // name, acc (кого?), riddle, fact
+  const A = {
+    farm:[
+      ['🐄','Корова','корову','Кто даёт молоко и говорит «му-у»?','Корова выпивает за день около 100 литров воды — почти целую ванну.'],
+      ['🐖','Свинья','свинью','Кто хрюкает и любит поваляться в грязи?','Свиньи почти не потеют, поэтому валяются в грязи, чтобы остыть.'],
+      ['🐔','Курица','курицу','Кто несёт яйца и кудахчет?','Курица — одна из ближайших ныне живущих родственниц динозавров.'],
+      ['🐎','Лошадь','лошадь','Кто скачет галопом и ржёт?','Лошади умеют дремать стоя и не падать.'],
+      ['🐑','Овца','овцу','У кого тёплая шерсть, из которой вяжут свитеры?','Овцы узнают своих друзей по мордочкам и помнят их годами.'],
+      ['🐐','Коза','козу','Кто бодается рожками и говорит «ме-е»?','У козы прямоугольные зрачки, и она видит почти всё вокруг себя.'],
+      ['🦆','Утка','утку','Кто плавает, ныряет и крякает?','Утята ходят хвостиком за первым, кого увидят после вылупления.'],
+      ['🐇','Кролик','кролика','Кто любит морковку и прыгает на длинных лапах?','Счастливый кролик подпрыгивает и крутится прямо в воздухе.']
+    ],
+    forest:[
+      ['🐻','Медведь','медведя','Кто спит всю зиму в берлоге?','Бурый медведь чует еду за несколько километров.'],
+      ['🦊','Лиса','лису','Кто рыжий, хитрый и с пушистым хвостом?','Лиса слышит мышь под снегом и ныряет за ней в сугроб.'],
+      ['🦔','Ёж','ежа','Кто носит на спине колючки?','На спине у ежа несколько тысяч иголок.'],
+      ['🐿️','Белка','белку','Кто прячет орехи и прыгает по веткам?','Белка забывает часть спрятанных орехов — так вырастают новые деревья.'],
+      ['🐺','Волк','волка','Кто живёт в стае и громко воет?','Волчий вой слышно за много километров.'],
+      ['🦌','Олень','оленя','У кого на голове ветвистые рога?','Рога у оленя каждый год отпадают и отрастают заново.'],
+      ['🦉','Сова','сову','Кто не спит ночью и ухает?','Сова может повернуть голову почти за спину.'],
+      ['🦡','Барсук','барсука','У кого полоски на мордочке и глубокая нора?','Барсуки живут в норах с десятками ходов.']
+    ],
+    savanna:[
+      ['🦁','Лев','льва','Кто царь зверей с большой гривой?','Рык льва слышно за 8 километров.'],
+      ['🦓','Зебра','зебру','Какая лошадка ходит в полосатой одёжке?','У каждой зебры свой узор полосок, как отпечатки пальцев.'],
+      ['🦒','Жираф','жирафа','У кого самая длинная шея?','Язык жирафа почти полметра длиной и тёмно-фиолетового цвета.'],
+      ['🐘','Слон','слона','У кого хобот и огромные уши?','Слоны «слышат» ногами: они чувствуют, как дрожит земля.'],
+      ['🐆','Гепард','гепарда','Кто самый быстрый бегун в пятнышках?','Гепард не умеет рычать, зато умеет мурлыкать.'],
+      ['🦏','Носорог','носорога','У кого рог прямо на носу?','Рог носорога сделан из того же вещества, что и наши ногти.'],
+      ['🦛','Бегемот','бегемота','Кто огромный и любит сидеть в реке?','Бегемот не умеет плавать — он бегает по дну вприпрыжку.'],
+      ['🐃','Буйвол','буйвола','У кого большие изогнутые рога?','Буйволы валяются в грязи, чтобы спастись от жары и насекомых.']
+    ],
+    jungle:[
+      ['🐒','Обезьяна','обезьяну','Кто ловко лазает по деревьям и любит бананы?','Некоторые обезьяны колют орехи камнями, как молотком.'],
+      ['🦜','Попугай','попугая','Какая яркая птица умеет повторять слова?','Серый попугай может выучить больше сотни слов.'],
+      ['🐅','Тигр','тигра','Какая большая кошка ходит в полоску?','Полоски у тигра есть даже на коже, а не только на шерсти.'],
+      ['🐊','Крокодил','крокодила','Кто зелёный и с зубастой пастью?','Крокодил не может высунуть язык.'],
+      ['🐍','Змея','змею','Кто длинный, без ног и ползает?','Змея «нюхает» воздух языком.'],
+      ['🐸','Лягушка','лягушку','Кто прыгает и квакает?','Проглатывая еду, лягушка помогает себе глазами.'],
+      ['🦥','Ленивец','ленивца','Кто самый медленный и висит на ветке?','Ленивец спускается с дерева примерно раз в неделю.'],
+      ['🦧','Орангутан','орангутана','Какая рыжая обезьяна с очень длинными руками?','В дождь орангутаны делают себе зонтики из больших листьев.']
+    ],
+    ocean:[
+      ['🐳','Кит','кита','Кто самый большой в океане и пускает фонтан?','Сердце синего кита весит примерно как пианино.'],
+      ['🐬','Дельфин','дельфина','Кто умный и весело прыгает из воды?','Дельфин спит половинкой мозга, а вторая следит за дыханием.'],
+      ['🐙','Осьминог','осьминога','У кого восемь щупалец?','У осьминога три сердца и голубая кровь.'],
+      ['🦈','Акула','акулу','У кого острые зубы и плавник на спине?','У акулы всю жизнь растут новые зубы на смену выпавшим.'],
+      ['🐢','Черепаха','черепаху','Кто носит дом-панцирь на спине?','Морские черепахи возвращаются откладывать яйца на пляж, где сами вылупились.'],
+      ['🦀','Краб','краба','Кто ходит боком и щёлкает клешнями?','Крабы ходят боком: так им удобнее сгибать ноги.'],
+      ['🐡','Рыба-фугу','рыбу-фугу','Какая рыбка умеет раздуваться, как шарик?','В опасности рыба-фугу набирает воду и становится в несколько раз больше.'],
+      ['🦭','Тюлень','тюленя','Кто ловко плавает и отдыхает на камнях?','Некоторые тюлени могут не дышать под водой больше часа.']
+    ]
+  };
+  const SND = { 'Корова':'му-у', 'Свинья':'хрю-хрю', 'Курица':'ко-ко-ко', 'Лошадь':'и-го-го', 'Овца':'бе-е', 'Коза':'ме-е', 'Утка':'кря-кря',
+    'Медведь':'р-р-р', 'Лиса':'тяв-тяв', 'Ёж':'фыр-фыр', 'Волк':'у-у-у', 'Сова':'угу-угу', 'Лев':'р-р-р-ау', 'Слон':'ту-ту-у', 'Гепард':'мур-р',
+    'Обезьяна':'у-у-а-а', 'Попугай':'привет', 'Тигр':'р-р-р', 'Змея':'ш-ш-ш', 'Лягушка':'ква-ква', 'Дельфин':'и-и-и', 'Тюлень':'арф-арф' };
+  const SIGN = { farm:['🐄','🐔','🐖'], forest:['🦊','🦔','🐿️'], savanna:['🦁','🦓','🦒'], jungle:['🐒','🦜','🐸'], ocean:['🐳','🐙','🦀'] };
+  const FLY = { farm:['🦋','🐝','🐦'], forest:['🦋','🐦','🍂'], savanna:['🦅','🦋'], jungle:['🦋','🐝'], ocean:['🕊️','🐟'] };
+  // приманки: еда → кто её любит
+  const FOODS = {
+    farm:[['🥕','Морковка','морковку',['Кролик','Лошадь']], ['🌽','Кукуруза','кукурузу',['Курица','Утка','Свинья']], ['🌾','Сено','сено',['Корова','Овца','Коза']]],
+    forest:[['🍯','Мёд','мёд',['Медведь']], ['🌰','Орешки','орешки',['Белка','Барсук']], ['🍄','Грибы','грибы',['Ёж','Олень']], ['🍖','Мясо','мясо',['Волк','Лиса','Сова']]],
+    savanna:[['🌿','Трава и листья','траву',['Зебра','Жираф','Слон','Носорог','Бегемот','Буйвол']], ['🍖','Мясо','мясо',['Лев','Гепард']]],
+    jungle:[['🍌','Бананы','бананы',['Обезьяна','Орангутан','Попугай']], ['🍃','Листья','листья',['Ленивец']], ['🐛','Жучки','жучков',['Лягушка','Змея']], ['🍖','Мясо','мясо',['Тигр','Крокодил']]],
+    ocean:[['🐟','Рыбка','рыбку',['Дельфин','Тюлень','Акула']], ['🦐','Рачки','рачков',['Кит','Осьминог','Краб','Рыба-фугу']], ['🌿','Водоросли','водоросли',['Черепаха']]]
+  };
+  const POSES = ['танцует','машет лапкой','улыбается','подмигивает','кружится'];
+  const ANIMALS = [];
+  HABS.forEach(h => A[h.id].forEach((r, i) => ANIMALS.push({ id:h.id + i, hab:h.id, emoji:r[0], name:r[1], acc:r[2], riddle:r[3], fact:r[4] })));
+  const byId = id => ANIMALS.find(a => a.id === id);
+  const habOf = id => HABS.find(h => h.id === id);
+  const ROUND = 6;
+
+  /* ================= СОСТОЯНИЕ ================= */
+  let album = load('fs_album', {});
+  let gold = load('fs_gold', {});
+  let lastShots = [];
+  let starsBy = load('fs_stars', {});
+  let mode = load('fs_mode', 'kid');
+  let voiceOn = load('fs_voice', true);
+  let soundOn = load('fs_sound', true);
+  const albumCount = () => Object.keys(album).length;
+  const unlockedHab = i => mode === 'kid' || i === 0 || (starsBy[HABS[i-1].id] || 0) >= 1;
+
+  /* ================= ЗВУК И ГОЛОС ================= */
+  let ac = null;
+  function actx(){ if(!ac){ try{ ac = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} } if(ac && ac.state === 'suspended') ac.resume(); return ac; }
+  function tone(f, d, type, vol, when){
+    if(!soundOn) return; const c = actx(); if(!c) return;
+    const t = c.currentTime + (when || 0), o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(vol || .08, t); g.gain.exponentialRampToValueAtTime(.0008, t + d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d);
+  }
+  function slide(f1, f2, d, vol){
+    if(!soundOn) return; const c = actx(); if(!c) return;
+    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(vol || .05, t); g.gain.exponentialRampToValueAtTime(.0008, t + d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d);
+  }
+  function shutter(){
+    if(!soundOn) return; const c = actx(); if(!c) return;
+    const len = c.sampleRate * .12, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 3);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'highpass'; f.frequency.value = 1800; g.gain.value = .35;
+    s.buffer = buf; s.connect(f); f.connect(g); g.connect(c.destination); s.start();
+    tone(2600, .03, 'square', .03);
+  }
+  const sfx = {
+    pop(){ slide(420, 820, .12, .035); },
+    ok(){ tone(784,.12,'triangle',.08); tone(1046,.14,'triangle',.08,.09); tone(1318,.22,'triangle',.08,.18); },
+    no(){ tone(330,.14,'sine',.06); tone(262,.2,'sine',.06,.12); },
+    win(){ [523,659,784,1046,1318].forEach((f,i)=> tone(f,.25,'triangle',.07,i*.11)); },
+    tap(){ tone(660,.05,'sine',.04); }
+  };
+  function lullaby(){
+    // «Ah! vous dirai-je, maman» (народная мелодия) — тихо и медленно
+    const N = { C:523, D:587, E:659, F:698, G:784, A:880 };
+    const seq = 'C C G G A A G- F F E E D D C-'.split(' ');
+    let t = 0;
+    seq.forEach(n => { const long = n.endsWith('-'); tone(N[n[0]], long ? 1 : .55, 'sine', .05, t); t += long ? .9 : .5; });
+  }
+  let voices = [];
+  function loadVoices(){ try{ voices = speechSynthesis.getVoices().filter(v => /^ru/i.test(v.lang)); }catch(e){} }
+  if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+  function say(text, opts){
+    if(!voiceOn || !('speechSynthesis' in window)) return;
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ru-RU'; if(voices[0]) u.voice = voices.find(v => /google|милена|milena|yandex/i.test(v.name)) || voices[0];
+      u.rate = (opts && opts.rate) || .95; u.pitch = 1.12;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  function paintToggles(){
+    $('voiceBtn').textContent = voiceOn ? '🗣 Голос' : '🤐 Без голоса'; $('voiceBtn').classList.toggle('off', !voiceOn);
+    $('soundBtn').textContent = soundOn ? '🔊 Звук' : '🔇 Без звука'; $('soundBtn').classList.toggle('off', !soundOn);
+  }
+  $('voiceBtn').onclick = ()=>{ voiceOn = !voiceOn; save('fs_voice', voiceOn); paintToggles(); if(voiceOn) say('Голос включён'); else try{ speechSynthesis.cancel(); }catch(e){} };
+  $('soundBtn').onclick = ()=>{ soundOn = !soundOn; save('fs_sound', soundOn); paintToggles(); if(soundOn) sfx.tap(); };
+  function paintMode(){
+    $('modeKid').classList.toggle('on', mode === 'kid'); $('modeKid').setAttribute('aria-checked', mode === 'kid');
+    $('modePro').classList.toggle('on', mode === 'pro'); $('modePro').setAttribute('aria-checked', mode === 'pro');
+  }
+  $('modeKid').onclick = ()=>{ mode = 'kid'; save('fs_mode', mode); paintMode(); sfx.tap(); say('Малыш. Покажу, кого искать. Все места открыты!'); };
+  $('modePro').onclick = ()=>{ mode = 'pro'; save('fs_mode', mode); paintMode(); sfx.tap(); say('Знаток. Буду загадывать загадки. Места открываются по очереди'); };
+
+  /* ================= ЭФФЕКТЫ ================= */
+  const CONF = ['#FFC83D','#FF6B6B','#3BB273','#5AB8FF','#B06BFF','#FFFFFF'];
+  function confetti(x, y, n){
+    if(reduced) return;
+    for(let i=0;i<(n||30);i++){
+      const c = document.createElement('div'); c.className = 'confetti'; c.style.background = CONF[i % CONF.length];
+      document.body.appendChild(c);
+      const dx = rnd(-200,200), up = rnd(-260,-100), rot = rnd(-800,800);
+      c.animate([
+        { transform:`translate(${x}px,${y}px) rotate(0)`, opacity:1 },
+        { transform:`translate(${x+dx*.6}px,${y+up}px) rotate(${rot/2}deg)`, opacity:1, offset:.35 },
+        { transform:`translate(${x+dx}px,${y+280+rnd(0,120)}px) rotate(${rot}deg)`, opacity:0 }
+      ], { duration:rnd(1100,1700), easing:'cubic-bezier(.25,.6,.4,1)' }).onfinish = ()=> c.remove();
+    }
+  }
+  let toastT;
+  function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=> el.classList.remove('show'), 2400); }
+  document.addEventListener('pointerdown', e=>{
+    actx();
+    if(reduced) return;
+    const el = e.target.closest('.btn'); if(!el) return;
+    const r = el.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2, sp = document.createElement('span');
+    sp.className = 'ripple'; sp.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;
+    el.appendChild(sp); setTimeout(()=> sp.remove(), 600);
+  }, { passive:true });
+
+  /* ================= РИСОВАНИЕ СЦЕНЫ ================= */
+  function coverSVG(type, h){
+    const g1 = h.ground[0], g2 = h.ground[1];
+    if(type === 'bush') return `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><g fill="#2F7A45"><circle cx="14" cy="24" r="14"/><circle cx="40" cy="16" r="17"/><circle cx="66" cy="18" r="16"/><circle cx="88" cy="24" r="13"/></g><g fill="#43A05E"><circle cx="24" cy="28" r="13"/><circle cx="52" cy="24" r="15"/><circle cx="78" cy="28" r="12"/></g><circle cx="46" cy="14" r="3" fill="#FF6B6B"/><circle cx="70" cy="20" r="2.6" fill="#FF6B6B"/><rect x="0" y="30" width="100" height="6" fill="#3E8550"/></svg>`;
+    if(type === 'hay') return `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><rect x="4" y="6" width="92" height="30" rx="9" fill="#E9B949"/><rect x="4" y="6" width="92" height="9" rx="7" fill="#F6D06A"/><g stroke="#C9952E" stroke-width="1.6" stroke-linecap="round"><path d="M14 16v16M28 14v18M42 16v16M58 14v18M72 16v16M86 14v18"/></g><g stroke="#FFF1B8" stroke-width="1.2" stroke-linecap="round"><path d="M10 8l6 -4M30 7l4 -5M55 7l5 -4M80 8l4 -5"/></g></svg>`;
+    if(type === 'grass') return `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><g fill="#C8932F">${Array.from({length:18},(_,i)=>{const x=i*6-2, hh=18+((i*7)%12);return `<path d="M${x} 36 L${x+3} ${36-hh} L${x+7} 36Z"/>`}).join('')}</g><g fill="#E6B84F">${Array.from({length:16},(_,i)=>{const x=i*6.5+1, hh=12+((i*5)%10);return `<path d="M${x} 36 L${x+4} ${36-hh} L${x+8} 36Z"/>`}).join('')}</g></svg>`;
+    if(type === 'leaves') return `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><g fill="#1E7B4B"><ellipse cx="14" cy="24" rx="18" ry="9" transform="rotate(-25 14 24)"/><ellipse cx="86" cy="24" rx="18" ry="9" transform="rotate(25 86 24)"/><ellipse cx="50" cy="20" rx="12" ry="16"/></g><g fill="#2EA567"><ellipse cx="30" cy="27" rx="17" ry="8" transform="rotate(-12 30 27)"/><ellipse cx="70" cy="27" rx="17" ry="8" transform="rotate(12 70 27)"/></g><g stroke="#8FE0B0" stroke-width="1" fill="none"><path d="M18 30 Q30 26 44 28M82 30 Q70 26 56 28M50 34 V10"/></g><rect x="0" y="31" width="100" height="5" fill="#27784E"/></svg>`;
+    return `<svg viewBox="0 0 100 36" preserveAspectRatio="none"><path d="M0 14 Q12 4 25 14 T50 14 T75 14 T100 14 V36 H0Z" fill="#4FB3E8"/><path d="M0 14 Q12 4 25 14 T50 14 T75 14 T100 14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M0 22 Q12 14 25 22 T50 22 T75 22 T100 22 V36 H0Z" fill="#1C7DC0"/><circle cx="20" cy="9" r="1.6" fill="#fff"/><circle cx="68" cy="10" r="1.4" fill="#fff"/></svg>`;
+  }
+  const SPOTS = [
+    [26,47,.74],[74,47,.74],
+    [12,27,.87],[50,28,.87],[88,27,.87],
+    [31,5,1],[69,5,1]
+  ];
+  /* живность на фоне: бабочки, птицы, листья, рыбки */
+  function stopAmbient(el){ clearTimeout(el._amb); el._amb = null; }
+  function startAmbient(el, h){
+    stopAmbient(el);
+    if(reduced) return;
+    const run = ()=>{
+      if(!el.isConnected) return;
+      const e = pick(FLY[h.id]);
+      const f = document.createElement('div'); f.className = 'flyer'; f.textContent = e;
+      const W = el.clientWidth, H = el.clientHeight;
+      let frames, dur;
+      if(e === '🍂'){
+        const x = rnd(.1,.9) * W, sz = rnd(22,32); f.style.fontSize = sz + 'px';
+        frames = [0,.25,.5,.75,1].map(t => ({ transform:`translate(${x + Math.sin(t*9)*40}px, ${-40 + t * H * .55}px) rotate(${t*360}deg)`, opacity: t > .85 ? 0 : 1 }));
+        dur = rnd(6000, 9000);
+      } else if(e === '🐟'){
+        const x0 = rnd(.15,.7) * W, base = H * rnd(.55,.68), sz = rnd(30,40); f.style.fontSize = sz + 'px';
+        frames = [0,.25,.5,.75,1].map(t => ({ transform:`translate(${x0 + t*90}px, ${base - Math.sin(t*Math.PI) * 90}px) rotate(${-40 + t*80}deg) scaleX(-1)`, opacity: (t===0||t===1) ? 0 : 1 }));
+        dur = 1300;
+      } else {
+        const ltr = Math.random() < .5, y = H * rnd(.12, .38), sz = e === '🦅' || e === '🕊️' ? rnd(34,46) : rnd(24,34);
+        f.style.fontSize = sz + 'px';
+        const amp = e === '🦋' || e === '🐝' ? 26 : 10;
+        frames = [0,.2,.4,.6,.8,1].map(t => {
+          const x = ltr ? -60 + t * (W + 120) : W + 60 - t * (W + 120);
+          return { transform:`translate(${x}px, ${y + Math.sin(t*12) * amp}px) scaleX(${ltr ? -1 : 1})` };
+        });
+        dur = e === '🐝' ? rnd(5000,7000) : rnd(8000, 12000);
+      }
+      el.appendChild(f);
+      f.animate(frames, { duration:dur, easing:'linear' }).onfinish = ()=> f.remove();
+      el._amb = setTimeout(run, rnd(2200, 4500));
+    };
+    el._amb = setTimeout(run, 700);
+  }
+  function buildScene(el, h){
+    el.style.setProperty('--sky1', h.sky[0]); el.style.setProperty('--sky2', h.sky[1]);
+    el.style.setProperty('--ground', h.ground[0]); el.style.setProperty('--ground2', h.ground[1]);
+    const clouds = h.id === 'ocean' || h.id === 'savanna' || true;
+    let html = '<div class="sunball"></div>';
+    if(clouds) html += `<div class="cloud emoji" style="top:14%;animation-duration:60s;animation-delay:-12s">☁️</div><div class="cloud emoji" style="top:25%;font-size:6vmin;animation-duration:85s;animation-delay:-55s">☁️</div>`;
+    html += `<svg class="hills" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0 60 C60 20 120 30 190 55 S320 20 400 45 V100 H0Z" fill="${h.hills[0]}"/><path d="M0 80 C80 50 150 70 220 78 S340 55 400 70 V100 H0Z" fill="${h.hills[1]}"/></svg>`;
+    html += '<div class="ground"></div>';
+    h.decor.forEach(d => { html += `<div class="decor" style="left:${d[1]}%;bottom:${parseFloat(d[2]) + 11}%;font-size:min(${d[3]}px, ${d[3]/4}vmin)">${d[0]}</div>`; });
+    SPOTS.forEach((s, i) => {
+      html += `<div class="spot" data-i="${i}" style="left:${s[0]}%;bottom:${s[1]}%;--s:${s[2]};z-index:${2+i}"><div class="hole"><button class="animal" tabindex="-1" aria-label=""><span></span></button></div><div class="cover">${coverSVG(h.cover, h)}</div></div>`;
+    });
+    html += '<div class="flash"></div>';
+    if(el.id === 'gameScene') html += '<div class="vf" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+    el.innerHTML = html;
+    startAmbient(el, h);
+  }
+
+  /* ================= НАВИГАЦИЯ ================= */
+  let cur = 'menu', mapMode = 'round';
+  function show(name){
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + name));
+    cur = name;
+    if(name !== 'game'){ game.stop(); stopAmbient($('gameScene')); }
+    if(name !== 'peek'){ peek.stop(); stopAmbient($('peekScene')); }
+    if(name !== 'night') night.stop();
+    if(name !== 'menu') stopAmbient($('menuScene'));
+    if(name === 'menu') demo.start(); else demo.stop();
+  }
+  function go(name, push){
+    if(push !== false) history.pushState({ s:name }, '');
+    if(name === 'map') renderMap();
+    if(name === 'album') renderAlbum();
+    if(name === 'parent') renderParent();
+    show(name);
+    if(name === 'peek') peek.start();
+    if(name === 'night') night.start();
+  }
+  function back(){ if(history.state && history.state.s && history.state.s !== 'menu') history.back(); else show('menu'); }
+  try{ history.replaceState({ s:'menu' }, ''); }catch(e){}
+  window.addEventListener('popstate', e=>{
+    if(modalOpen){ closeModal(true); return; }
+    const s = (e.state && e.state.s) || 'menu';
+    if(s === 'game' || s === 'result'){ show('map'); renderMap(); return; }
+    if(s === 'map') renderMap();
+    if(s === 'album') renderAlbum();
+    if(s === 'parent') renderParent();
+    show(s);
+    if(s === 'peek') peek.start();
+    if(s === 'night') night.start();
+  });
+  document.addEventListener('click', e=>{
+    const g = e.target.closest('[data-go]'); if(g){ sfx.tap(); go(g.dataset.go); return; }
+    if(e.target.closest('[data-back]')){ sfx.tap(); back(); }
+  });
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ if(modalOpen) closeModal(); else if(cur !== 'menu') back(); } });
+
+  /* ================= МЕНЮ: ДЕМО-СЦЕНА ================= */
+  const demo = {
+    t:null,
+    start(){
+      if(this.t) return;
+      const el = $('menuScene');
+      if(el.dataset.built) startAmbient(el, HABS[2]);
+      el.style.bottom = Math.max(0, document.querySelector('#s-menu .panel').offsetHeight - 30) + 'px';
+      if(!el.dataset.built){ buildScene(el, HABS[2]); el.dataset.built = 1;
+        el.querySelectorAll('.spot').forEach(sp => sp.onpointerdown = ()=>{
+          const a = sp._a; if(!a || !sp.classList.contains('up')) return; sp.classList.remove('nope'); void sp.offsetWidth; sp.classList.add('caught'); sfx.pop(); say(a.name);
+          setTimeout(()=> sp.classList.remove('caught'), 500);
+        });
+      }
+      const pool = shuffle(ANIMALS);
+      let k = 0;
+      const tick = ()=>{
+        const spots = [...el.querySelectorAll('.spot')].filter(s => !s.classList.contains('up'));
+        if(spots.length > 3){
+          const sp = pick(spots), a = pool[k++ % pool.length];
+          sp._a = a; sp.querySelector('span').textContent = a.emoji; sp.classList.add('up');
+          setTimeout(()=> sp.classList.remove('up'), rnd(2200, 3600));
+        }
+        this.t = setTimeout(tick, rnd(700, 1300));
+      };
+      tick();
+    },
+    stop(){ clearTimeout(this.t); this.t = null; }
+  };
+
+  /* ================= КАРТА ================= */
+  function renderMap(){
+    $('mapTitle').textContent = mapMode === 'free' ? 'Где погуляем?' : 'Куда поедем?';
+    const anyStars = HABS.some(h => starsBy[h.id]);
+    const curI = HABS.findIndex((h, i) => unlockedHab(i) && !starsBy[h.id]);
+    let html = '';
+    HABS.forEach((h, i) => {
+      const side = i % 2 ? 'r' : 'l';
+      const got = A[h.id].filter((_, j) => album[h.id + j]).length;
+      const st = starsBy[h.id] || 0, open = mapMode === 'free' || unlockedHab(i), sg = SIGN[h.id];
+      if(i > 0){
+        const d = side === 'r' ? 'M108 0 C108 40, 292 24, 292 64' : 'M292 0 C292 40, 108 24, 108 64';
+        html += `<div class="road"><svg viewBox="0 0 400 64" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="6" stroke-linecap="round" stroke-dasharray="1 16"/></svg></div>`;
+      }
+      html += `<div class="stopx ${side}">
+        <button class="node${open ? '' : ' locked'}" data-h="${i}" style="--i:${i};--sky1:${h.sky[0]};--ground:${h.ground[0]}">
+          <div class="disc"><span class="sm a emoji">${sg[1]}</span><span class="big emoji">${sg[0]}</span><span class="sm b emoji">${sg[2]}</span></div>
+          ${open ? '' : '<span class="lock emoji">🔒</span>'}
+          <div class="lbl">${h.name}</div>
+          <div class="st emoji">${[0,1,2].map(n => n < st ? '⭐' : '<span class="off">⭐</span>').join('')}</div>
+          <div class="cnt">${open ? `📷 ${got} из ${A[h.id].length}` : `Сначала «${HABS[i-1].name}»`}</div>
+        </button>
+        ${i === curI && mapMode === 'round' ? `<span class="jeep emoji">🚙</span>${!anyStars ? '<span class="here">Начни отсюда!</span>' : ''}` : ''}
+      </div>`;
+    });
+    $('habs').innerHTML = html;
+  }
+  $('habs').onclick = e=>{
+    const b = e.target.closest('.node'); if(!b) return;
+    const i = +b.dataset.h;
+    if(mapMode === 'free'){ sfx.tap(); history.pushState({ s:'game' }, ''); show('game'); game.start(i, true); return; }
+    if(!unlockedHab(i)){ sfx.no(); say('Сначала сфотографируй животных в месте «' + HABS[i-1].name + '»'); b.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}], {duration:300}); return; }
+    sfx.tap(); history.pushState({ s:'game' }, ''); show('game'); game.start(i);
+  };
+
+  /* ================= ИГРА ================= */
+  const game = {
+    hab:null, hi:0, targets:[], idx:0, misses:0, shots:[], golds:[], goldsLeft:0, newOnes:0, timers:[], running:false, lastHit:0, sinceTarget:0,
+    stop(){ this.running = false; this.timers.forEach(clearTimeout); this.timers = []; try{ speechSynthesis.cancel(); }catch(e){} },
+    later(fn, ms){ const t = setTimeout(fn, ms); this.timers.push(t); return t; },
+    cfg(){ return mode === 'kid' ? { stay:[3000,4200], gap:[1100,1700], max:2, prob:.5, hint:5000 } : { stay:[1800,2700], gap:[650,1100], max:3, prob:.34, hint:9000 }; },
+    start(hi, free){
+      this.stop();
+      this.hi = hi; this.hab = HABS[hi]; this.free = !!free; this.freeCount = 0; this.sharp = 0; this.lureCd = 0;
+      this.targets = this.free ? [] : shuffle(ANIMALS.filter(a => a.hab === this.hab.id)).slice(0, ROUND);
+      $('film').classList.toggle('free', this.free);
+      this.renderTray();
+      this.idx = 0; this.misses = 0; this.shots = []; this.golds = []; this.goldsLeft = 2; this.newOnes = 0; this.running = true;
+      const sc = $('gameScene'); buildScene(sc, this.hab);
+      // нажатие засчитывается по всему месту, где сидит животное (вместе с кустом),
+      // чтобы маленьким детям было легче попасть
+      sc.querySelectorAll('.spot').forEach(sp => {
+        sp.addEventListener('pointerdown', e=>{ e.preventDefault(); this.tap(sp); });
+      });
+      if(!sc._focusWired){ sc._focusWired = 1;
+        sc.addEventListener('pointerdown', e=>{
+          if(reduced || !game.running) return;
+          const r = sc.getBoundingClientRect(), f = document.createElement('div');
+          f.className = 'focus'; f.style.left = (e.clientX - r.left) + 'px'; f.style.top = (e.clientY - r.top) + 'px';
+          sc.appendChild(f);
+          f.animate([{ transform:'scale(1.6)', opacity:0 }, { transform:'scale(1)', opacity:1, offset:.4 }, { transform:'scale(.95)', opacity:0 }], { duration:600, easing:'ease-out' }).onfinish = ()=> f.remove();
+        });
+      }
+      this.paintFilm();
+      if(this.free){
+        $('taskIc').textContent = '🦝';
+        $('taskTx').innerHTML = `Фотографируй кого хочешь!<small>Прогулка: ${this.hab.name}</small>`;
+        this.bubble('Гуляем без спешки! Нажимай на любого зверя.', false);
+        say(this.hab.name + '! Гуляем и фотографируем кого хочешь!', { rate:1 });
+      } else {
+        this.bubble(mode === 'kid' ? 'Я покажу, кого искать!' : 'Слушай загадку!', false);
+        say(this.hab.name + '! ' + (mode === 'kid' ? 'Фотографируй, кого я покажу.' : 'Отгадывай загадки и фотографируй.'), { rate:1 });
+        this.later(()=> this.nextTask(), 1500);
+      }
+      this.later(()=> this.spawnLoop(), 900);
+    },
+    get target(){ return this.free ? null : this.targets[this.idx]; },
+    renderTray(){
+      const foods = FOODS[this.hab.id];
+      $('tray').innerHTML = '<span class="lbl">Угощение</span>' + foods.map((f, i) => `<button data-f="${i}" aria-label="${f[1]}">${f[0]}</button>`).join('');
+      $('tray').querySelectorAll('button').forEach(b => b.onclick = e=>{ e.stopPropagation(); this.lure(+b.dataset.f, b); });
+    },
+    lure(fi, btn){
+      if(!this.running || Date.now() < this.lureCd) return;
+      const f = FOODS[this.hab.id][fi];
+      this.lureCd = Date.now() + 2600;
+      const btns = $('tray').querySelectorAll('button'); btns.forEach(b => b.classList.add('cool'));
+      this.later(()=> btns.forEach(b => b.classList.remove('cool')), 2600);
+      const fans = ANIMALS.filter(a => a.hab === this.hab.id && f[3].includes(a.name));
+      const up = this.spots().filter(s => s.classList.contains('up'));
+      const t = this.target;
+      let a = fans.find(x => x === t && !up.some(s => s._a === x)) || pick(fans.filter(x => !up.some(s => s._a === x)) .length ? fans.filter(x => !up.some(s => s._a === x)) : fans);
+      let free = this.spots().filter(s => !s.classList.contains('up') && !s._busy);
+      if(!free.length){ const victim = up.find(s => s._a !== t) || up[0]; if(victim){ this.hideSpot(victim); } }
+      sfx.tap(); say(f[1] + '! Кто любит ' + f[2] + '?');
+      // летящая еда
+      const r = btn.getBoundingClientRect();
+      this.later(()=>{
+        free = this.spots().filter(s => !s.classList.contains('up') && !s._busy);
+        const sp = free.length ? pick(free) : null; if(!sp || !this.running) return;
+        const tr = sp.getBoundingClientRect();
+        const fl = document.createElement('div'); fl.className = 'food-fly'; fl.textContent = f[0];
+        fl.style.left = r.left + 8 + 'px'; fl.style.top = r.top + 4 + 'px'; document.body.appendChild(fl);
+        const dx = tr.left + tr.width/2 - r.left - 28, dy = tr.top + tr.height*.35 - r.top;
+        fl.animate([{ transform:'translate(0,0) scale(1)' }, { transform:`translate(${dx*.5}px,${dy - 120}px) scale(1.2) rotate(180deg)`, offset:.5 }, { transform:`translate(${dx}px,${dy}px) scale(.8) rotate(360deg)`, opacity:.3 }], { duration:reduced ? 1 : 650, easing:'ease-in-out' }).onfinish = ()=>{
+          fl.remove(); if(!this.running) return;
+          this.showAt(sp, a, this.cfg().stay[1] + 600, false);
+          sp.insertAdjacentHTML('beforeend', `<span class="yum">${f[0]}</span>`);
+          setTimeout(()=>{ const y = sp.querySelector('.yum'); if(y) y.remove(); }, 1300);
+          this.bubble(`${f[0]} ${a.name} любит ${f[2]}!`, false);
+          this.later(()=> say(`${a.name} любит ${f[2]}!`), 500);
+        };
+      }, 250);
+    },
+    nextTask(){
+      if(!this.running) return;
+      const t = this.target; if(!t) return;
+      const task = $('task');
+      task.classList.remove('swap'); void task.offsetWidth; task.classList.add('swap');
+      if(mode === 'kid'){
+        $('taskIc').textContent = t.emoji;
+        $('taskTx').innerHTML = `Сфотографируй<br>${t.acc}<small>нажми на животное</small>`;
+        say('Сфотографируй ' + t.acc + '!');
+      } else {
+        $('taskIc').textContent = '🦝';
+        $('taskTx').innerHTML = `${t.riddle}<small>Загадка ${this.idx + 1} из ${ROUND}</small>`;
+        say(t.riddle);
+      }
+      this.lastHit = Date.now(); this.sinceTarget = 0;
+      this.paintFilm();
+    },
+    spots(){ return [...$('gameScene').querySelectorAll('.spot')]; },
+    spawnLoop(){
+      if(!this.running) return;
+      const c = this.cfg();
+      const up = this.spots().filter(s => s.classList.contains('up'));
+      const free = this.spots().filter(s => !s.classList.contains('up') && !s._busy);
+      if(up.length < c.max && free.length && (this.target || this.free)){
+        const t = this.target;
+        const targetUp = !t || up.some(s => s._a === t);
+        let a;
+        if(this.free){ a = pick(ANIMALS.filter(x => x.hab === this.hab.id && !up.some(s => s._a === x))); }
+        else if(!targetUp && (Math.random() < c.prob || this.sinceTarget >= 2)){ a = t; this.sinceTarget = 0; }
+        else {
+          const others = ANIMALS.filter(x => x.hab === this.hab.id && x !== t && !up.some(s => s._a === x));
+          a = pick(others); this.sinceTarget++;
+        }
+        const isGold = this.goldsLeft > 0 && (this.idx > 0 || this.free) && Math.random() < .09;
+        if(this.free && this.goldsLeft < 1 && this.freeCount % 8 === 7) this.goldsLeft = 1;
+        if(isGold) this.goldsLeft--;
+        this.showAt(pick(free), a, rnd(c.stay[0], c.stay[1]) + (isGold ? 600 : 0), isGold);
+      }
+      this.later(()=> this.spawnLoop(), rnd(c.gap[0], c.gap[1]));
+    },
+    showAt(sp, a, stay, isGold){
+      sp._a = a; sp._busy = true; sp._gold = !!isGold; sp._upAt = Date.now(); sp._pose = pick(POSES);
+      sp.classList.toggle('gold', !!isGold);
+      if(isGold) this.later(()=> tone(1760,.12,'triangle',.04), 200);
+      sp.querySelector('span').textContent = a.emoji;
+      sp.querySelector('.animal').setAttribute('aria-label', a.name);
+      sp.classList.remove('caught','nope','hint'); sp.classList.add('up');
+      sfx.pop();
+      if(a === this.target && Date.now() - this.lastHit > this.cfg().hint) sp.classList.add('hint');
+      sp._hide = this.later(()=> this.hideSpot(sp), stay);
+    },
+    hideSpot(sp){ sp.classList.remove('up','hint'); clearTimeout(sp._hide); this.later(()=>{ sp._busy = false; sp.classList.remove('gold'); sp._gold = false; }, 420); },
+    tap(sp){
+      if(!this.running || !sp.classList.contains('up') || sp._locked) return;
+      const a = sp._a, t = this.target;
+      if(this.free){
+        sp._locked = true; clearTimeout(sp._hide); sp.classList.add('caught');
+        if(sp._gold) this.goldGot(sp, a, false);
+        this.snapFree(sp, a); return;
+      }
+      if(a === t){
+        if(Date.now() - sp._upAt > 420) this.sharp++;
+        sp._locked = true; clearTimeout(sp._hide);
+        sp.classList.remove('hint'); sp.classList.add('caught');
+        if(sp._gold) this.goldGot(sp, a, false);
+        this.snap(sp, a);
+      } else if(sp._gold){
+        sp._locked = true; clearTimeout(sp._hide);
+        sp.classList.add('caught');
+        this.goldGot(sp, a, true);
+      } else {
+        this.misses++;
+        sp.classList.remove('nope'); void sp.offsetWidth; sp.classList.add('nope');
+        sfx.no(); buzz(30);
+        this.bubble(`Это ${a.name.toLowerCase()}!`, false);
+        if(mode === 'kid') say(`Это ${a.name.toLowerCase()}. А мы ищем ${t.acc}.`);
+        else say(`Это ${a.name.toLowerCase()}. Попробуй ещё!`);
+        this.later(()=> this.hideSpot(sp), 500);
+      }
+    },
+    goldGot(sp, a, standalone){
+      const was = !!gold[a.id];
+      gold[a.id] = 1; save('fs_gold', gold);
+      if(!album[a.id]){ album[a.id] = 1; save('fs_album', album); this.newOnes++; }
+      if(!this.golds.includes(a)) this.golds.push(a);
+      const r = sp.querySelector('.animal').getBoundingClientRect();
+      confetti(r.left + r.width/2, r.top + r.height/2, 26);
+      [1568, 2093, 2637].forEach((f, i) => tone(f, .18, 'triangle', .05, .15 + i * .08));
+      if(standalone){
+        shutter(); buzz([20, 40, 20]);
+        const fl = $('gameScene').querySelector('.flash');
+        if(!reduced) fl.animate([{ opacity:0, background:'#FFE27A' }, { opacity:.8, background:'#FFE27A', offset:.12 }, { opacity:0, background:'#FFE27A' }], { duration:520 });
+        this.bubble(`✨ Редкий кадр: ${a.name.toLowerCase()} ${sp._pose}!`, 'gold');
+        say(was ? `Редкий кадр! ${a.name} ${sp._pose}!` : `Ух ты! Редкий золотой кадр! ${a.name} ${sp._pose}!`);
+        this.later(()=>{ sp._locked = false; this.hideSpot(sp); }, 800);
+      }
+    },
+    snap(sp, a){
+      shutter(); buzz(25);
+      const fl = $('gameScene').querySelector('.flash');
+      if(!reduced) fl.animate([{ opacity:0 }, { opacity:.9, offset:.12 }, { opacity:0 }], { duration:420 });
+      const isNew = !album[a.id];
+      album[a.id] = 1; save('fs_album', album);
+      if(isNew) this.newOnes++;
+      this.shots.push(a);
+      // полароид летит в плёнку
+      const r = sp.querySelector('.animal').getBoundingClientRect();
+      const frame = $('film').children[this.idx].getBoundingClientRect();
+      const p = document.createElement('div'); p.className = 'polaroid-fly';
+      const size = Math.max(70, r.width);
+      p.innerHTML = `<div style="width:${size}px;height:${size}px;font-size:${size*.72}px;background:${this.hab.sky[0]}">${a.emoji}</div>`;
+      p.style.left = (r.left + r.width/2 - size/2 - 6) + 'px'; p.style.top = (r.top + r.height/2 - size/2 - 6) + 'px';
+      document.body.appendChild(p);
+      const dx = frame.left + frame.width/2 - (r.left + r.width/2), dy = frame.top + frame.height/2 - (r.top + r.height/2);
+      const k = frame.width / (size + 12);
+      const anim = p.animate([
+        { transform:'scale(1) rotate(0)', opacity:1 },
+        { transform:'scale(1.15) rotate(-6deg)', opacity:1, offset:.3 },
+        { transform:`translate(${dx}px,${dy}px) scale(${k}) rotate(8deg)`, opacity:.9 }
+      ], { duration:reduced ? 1 : 900, easing:'cubic-bezier(.5,0,.3,1)' });
+      anim.onfinish = ()=> p.remove();
+      const praise = pick(['Отлично!','Классное фото!','Супер!','Молодец!','Вот это снимок!','Здорово!']);
+      const snd = SND[a.name];
+      if(sp._gold){ this.bubble(`✨ Редкий кадр: ${a.name.toLowerCase()} ${sp._pose}!`, 'gold'); say(`Редкий золотой кадр! ${a.name} ${sp._pose}!`); }
+      else {
+        this.bubble(`${praise} ${a.emoji} ${a.name}`, true);
+        if(mode === 'kid' && snd) say(`${praise} ${a.name} говорит: ${snd}!`);
+        else say(`${praise} Это ${a.name.toLowerCase()}.`);
+      }
+      this.later(()=>{ sfx.ok(); }, 150);
+      // убрать всех
+      this.spots().forEach(s => { if(s !== sp) this.hideSpot(s); });
+      this.later(()=>{ sp._locked = false; this.hideSpot(sp); }, 900);
+      this.idx++;
+      this.later(()=> this.paintFilm(), 900);
+      if(this.idx >= ROUND){ this.later(()=> this.finish(), 1900); }
+      else this.later(()=> this.nextTask(), 2100);
+    },
+    snapFree(sp, a){
+      shutter(); buzz(25);
+      const fl = $('gameScene').querySelector('.flash');
+      if(!reduced) fl.animate([{ opacity:0 }, { opacity:.9, offset:.12 }, { opacity:0 }], { duration:420 });
+      if(!album[a.id]){ album[a.id] = 1; save('fs_album', album); toast('📔 Новое фото: ' + a.name); }
+      this.freeCount++; this.shots.push(a); if(this.shots.length > 6) this.shots.shift();
+      lastShots = this.shots.slice();
+      $('film').querySelector('.cntx').textContent = '📷 ' + this.freeCount;
+      const snd = SND[a.name];
+      if(!sp._gold){ this.bubble(`${a.emoji} ${a.name}${snd ? ' — «' + snd + '»' : ''}`, true); say(snd ? `${a.name}! ${snd}!` : `${a.name}!`); }
+      this.later(()=> sfx.ok(), 150);
+      if(this.freeCount % 10 === 0) this.later(()=>{ this.bubble(`Уже ${this.freeCount} снимков! Ты настоящий фотограф!`, 'gold'); say(`Уже ${this.freeCount} снимков! Ты настоящий фотограф!`); confetti(innerWidth/2, innerHeight*.4, 40); }, 1400);
+      this.later(()=>{ sp._locked = false; this.hideSpot(sp); }, 800);
+    },
+    bubble(text, good){
+      const b = $('bubble'); $('bubbleTx').textContent = text; b.className = 'bubble show' + (good === 'gold' ? ' goldb' : good ? ' good' : '');
+      clearTimeout(this._bt); this._bt = setTimeout(()=> b.classList.remove('show'), 2200);
+    },
+    paintFilm(){
+      $('film').innerHTML = Array.from({ length:ROUND }, (_, i) =>
+        `<i class="${i < this.idx ? 'done' : ''}${i === this.idx ? ' cur' : ''}">${i < this.idx ? this.shots[i].emoji : ''}</i>`).join('') + `<span class="cntx">📷 ${this.freeCount || 0}</span>`;
+    },
+    finish(){
+      this.stop(); lastShots = this.shots.slice();
+      const stars = this.misses <= 1 ? 3 : this.misses <= 4 ? 2 : 1;
+      const prev = starsBy[this.hab.id] || 0;
+      if(stars > prev){ starsBy[this.hab.id] = stars; save('fs_stars', starsBy); }
+      const opened = this.hi + 1 < HABS.length && prev === 0;
+      showResult(this, stars, opened);
+    }
+  };
+  $('task').onclick = ()=>{ const t = game.target; if(!t){ if(game.free) say('Фотографируй кого хочешь!'); return; } say(mode === 'kid' ? 'Сфотографируй ' + t.acc + '!' : t.riddle); };
+
+  /* ================= ИТОГ ================= */
+  function pola(a, extra){
+    const h = habOf(a.hab);
+    return `<div class="pola${gold[a.id] ? ' goldf' : ''}" style="--sky1:${h.sky[0]};--ground:${h.ground[0]};${extra || ''}"><div class="ph"><span>${a.emoji}</span></div><div class="cap">${a.name}</div></div>`;
+  }
+  function showResult(g, stars, opened){
+    history.replaceState({ s:'result' }, '');
+    show('result');
+    const titles = ['Хорошая прогулка!','Отличная прогулка!','Лучший фотограф!'];
+    const fav = pick(g.shots);
+    const comments = [
+      `Мне больше всего понравился снимок «${fav.name}». ${SND[fav.name] ? 'Так и слышу: «' + SND[fav.name] + '»!' : 'Очень чёткий!'}`,
+      g.golds.length ? `Ого, у тебя редкий кадр: ${g.golds[0].name.toLowerCase()}! Такие попадаются нечасто.` : `Чётких кадров: ${g.sharp} из ${ROUND}. ${g.sharp >= 5 ? 'Рука не дрогнула!' : 'Жми, когда зверь высунулся целиком.'}`,
+      g.misses === 0 ? 'Ни одной ошибки! Ты точно знаешь всех зверей.' : `Попробуй угостить зверей едой внизу экрана — они выходят быстрее!`
+    ];
+    $('resGuide').textContent = pick(comments);
+    $('resTitle').textContent = titles[stars - 1];
+    const ss = $('stars').children;
+    [...ss].forEach((s, i) => { s.className = ''; if(i < stars) setTimeout(()=>{ s.className = 'on'; tone(660 + i*220, .18, 'triangle', .07); }, 350 + i * 320); });
+    $('newTag').textContent = (g.newOnes ? `Новых фото в альбоме: ${g.newOnes}` : 'Все эти фото уже есть в альбоме') + (g.golds.length ? ` · ✨ Золотых: ${g.golds.length}` : '');
+    const fanList = g.shots.concat(g.golds.filter(a => !g.shots.includes(a)));
+    $('fan').innerHTML = fanList.map((a, i) => pola(a, `--i:${i};--r:${(i % 2 ? 1 : -1) * rnd(3,8).toFixed(1)}deg`)).join('');
+    const next = g.hi + 1 < HABS.length ? HABS[g.hi + 1] : null;
+    $('nextBtn').textContent = next ? `Дальше: ${next.name}` : 'В альбом';
+    $('nextBtn').onclick = ()=>{
+      sfx.tap();
+      if(next){ history.replaceState({ s:'game' }, ''); show('game'); game.start(g.hi + 1); }
+      else { history.replaceState({ s:'album' }, ''); renderAlbum(); show('album'); }
+    };
+    $('resNight').onclick = ()=>{ sfx.tap(); history.replaceState({ s:'night' }, ''); show('night'); night.start(); };
+    $('againBtn').onclick = ()=>{ sfx.tap(); history.replaceState({ s:'game' }, ''); show('game'); game.start(g.hi); };
+    setTimeout(()=>{ sfx.win(); confetti(innerWidth/2, innerHeight * .3, stars * 18); }, 300);
+    let msg = titles[stars - 1] + ' ' + (stars === 3 ? 'Три звезды!' : stars === 2 ? 'Две звезды!' : 'Одна звезда!');
+    if(opened && next && mode === 'pro') { msg += ' Открыто новое место: ' + next.name + '!'; setTimeout(()=> toast('🔓 Открыто: ' + next.name), 1400); }
+    if(albumCount() === ANIMALS.length && !load('fs_done', false)){ save('fs_done', true); msg += ' Ты собрал весь альбом!'; setTimeout(()=> toast('🏆 Весь альбом собран!'), 2400); }
+    say(msg, { rate:1 });
+    paintAlbumCount();
+  }
+
+  /* ================= АЛЬБОМ ================= */
+  let albumTab = 'all';
+  function paintAlbumCount(){ $('albumCount').textContent = albumCount() + '/' + ANIMALS.length; }
+  function renderAlbum(){
+    const c = albumCount();
+    const gc = Object.keys(gold).length;
+    $('albumTop').textContent = c + '/' + ANIMALS.length + (gc ? ` · ✨${gc}` : '');
+    $('aprog').style.width = '0';
+    requestAnimationFrame(()=> requestAnimationFrame(()=> $('aprog').style.width = (c / ANIMALS.length * 100) + '%'));
+    $('tabs').innerHTML = [['all','Все']].concat(HABS.map(h => [h.id, h.name])).map(([k, t]) => `<button class="tab${albumTab === k ? ' on' : ''}" data-t="${k}">${t}</button>`).join('');
+    const list = ANIMALS.filter(a => albumTab === 'all' || a.hab === albumTab);
+    $('agrid').innerHTML = list.map((a, i) => {
+      const h = habOf(a.hab), got = !!album[a.id];
+      return `<div class="pola${got ? '' : ' locked'}${gold[a.id] ? ' goldf' : ''}" data-id="${a.id}" style="--i:${Math.min(i, 20)};--r:${((i*37)%7)-3}deg;--sky1:${h.sky[0]};--ground:${h.ground[0]}"><div class="ph"><span>${a.emoji}</span></div><div class="cap">${got ? a.name : '?'}</div></div>`;
+    }).join('');
+  }
+  $('tabs').onclick = e=>{ const t = e.target.closest('[data-t]'); if(!t) return; albumTab = t.dataset.t; sfx.tap(); renderAlbum(); };
+  $('agrid').onclick = e=>{
+    const p = e.target.closest('.pola'); if(!p) return;
+    const a = byId(p.dataset.id);
+    if(!album[a.id]){ sfx.no(); const h = habOf(a.hab); say('Это фото ещё не снято. Поищи в месте «' + h.name + '».'); p.animate([{transform:'rotate(0)'},{transform:'rotate(-6deg)'},{transform:'rotate(6deg)'},{transform:'rotate(0)'}], {duration:350}); return; }
+    openModal(a);
+  };
+
+  let modalOpen = false;
+  function openModal(a){
+    const h = habOf(a.hab);
+    $('modal').innerHTML = `<div class="pola${gold[a.id] ? ' goldf' : ''}" style="--sky1:${h.sky[0]};--ground:${h.ground[0]}"><div class="ph"><span>${a.emoji}</span></div><div class="cap">${a.name}</div>
+      <div class="fact"><b>${h.name} · а ты знал?</b>${a.fact}${SND[a.name] ? `<br><span style="color:#8B97B5;font-weight:800">Говорит: «${SND[a.name]}»</span>` : ''}${gold[a.id] ? '<br><span style="color:#C98A00;font-weight:900">✨ Есть золотое фото!</span>' : ''}</div></div>
+      <div class="mbtns"><button class="btn sun" id="mSay">🔈 Послушать</button><button class="btn" id="mClose">Закрыть</button></div>`;
+    $('modalBack').classList.add('open'); $('modal').classList.add('open');
+    if(!modalOpen) history.pushState({ s:cur, modal:true }, '');
+    modalOpen = true;
+    $('mSay').onclick = ()=> say(a.name + '. ' + a.fact);
+    $('mClose').onclick = ()=> closeModal();
+    say(a.name + '. ' + a.fact);
+  }
+  function closeModal(fromPop){
+    if(!modalOpen) return;
+    modalOpen = false; $('modalBack').classList.remove('open'); $('modal').classList.remove('open');
+    try{ speechSynthesis.cancel(); }catch(e){}
+    if(!fromPop && history.state && history.state.modal) history.back();
+  }
+  $('modalBack').onclick = ()=> closeModal();
+
+  /* ================= КТО ТАМ? ================= */
+  const peek = {
+    t:[], a:null, state:'idle', last:null,
+    later(fn, ms){ this.t.push(setTimeout(fn, ms)); },
+    stop(){ this.t.forEach(clearTimeout); this.t = []; this.state = 'idle'; },
+    bubble(text, good){ const b = $('peekBubble'); $('peekBubbleTx').textContent = text; b.className = 'bubble show' + (good ? ' good' : ''); clearTimeout(this._bt); this._bt = setTimeout(()=> b.classList.remove('show'), 2600); },
+    start(){
+      this.stop();
+      this.bubble('Слушай, кто прячется, и нажми на кустик!', false);
+      say('Слушай, кто прячется в кустах. Потом нажми и проверь!');
+      this.later(()=> this.round(), 2600);
+    },
+    round(){
+      const pool = ANIMALS.filter(x => SND[x.name] && x !== this.last);
+      const a = pick(pool); this.a = a; this.last = a;
+      const h = habOf(a.hab), sc = $('peekScene');
+      buildScene(sc, h);
+      sc.querySelectorAll('.spot').forEach(sp => sp.remove());
+      sc.insertAdjacentHTML('beforeend', `<div class="spot bigspot wait" style="left:50%;bottom:14%;--s:1.9;z-index:9"><div class="hole"><button class="animal" tabindex="-1"><span>${a.emoji}</span></button></div><div class="cover">${coverSVG(h.cover, h)}</div></div><div class="qmark">?</div>`);
+      const sp = sc.querySelector('.bigspot');
+      sp.addEventListener('pointerdown', e=>{ e.preventDefault(); this.open(); });
+      sc.querySelector('.qmark').addEventListener('pointerdown', ()=> this.open());
+      this.state = 'wait';
+      this.later(()=> this.ask(), 500);
+      this.later(()=>{ if(this.state === 'wait' && this.a === a) this.ask(true); }, 8000);
+    },
+    ask(again){
+      if(this.state !== 'wait') return;
+      const s = SND[this.a.name];
+      slide(300, 520, .25, .04); setTimeout(()=> slide(520, 300, .25, .04), 260);
+      say(again ? `Кто говорит: ${s}? Нажми на кустик!` : `${s}! ${s}! Кто там?`);
+    },
+    open(){
+      if(this.state !== 'wait') return;
+      this.state = 'open';
+      const sc = $('peekScene'), sp = sc.querySelector('.bigspot'), a = this.a;
+      sp.classList.remove('wait'); sp.classList.add('up');
+      sc.querySelector('.qmark').classList.add('hide');
+      sfx.ok(); buzz(20);
+      const r = sp.getBoundingClientRect(); confetti(r.left + r.width/2, r.top + r.height*.3, 24);
+      this.bubble(`${a.emoji} Это ${a.name.toLowerCase()}! «${SND[a.name]}»`, true);
+      say(`Это ${a.name.toLowerCase()}! ${SND[a.name]}!`);
+      this.later(()=>{ sp.classList.remove('up'); }, 3000);
+      this.later(()=> this.round(), 3700);
+    }
+  };
+  $('peekRepeat').onclick = ()=>{ if(peek.state === 'wait') peek.ask(); else if(peek.a) say(peek.a.name); };
+
+  /* ================= СПОКОЙНОЙ НОЧИ ================= */
+  const night = {
+    t:[], list:[], sleeping:0, prog:new Map(), done:false,
+    later(fn, ms){ this.t.push(setTimeout(fn, ms)); },
+    stop(){ this.t.forEach(clearTimeout); this.t = []; clearInterval(this.shootT); },
+    start(){
+      this.stop(); this.done = false; this.sleeping = 0; this.prog = new Map();
+      let list = lastShots.length ? lastShots.slice() : ANIMALS.filter(a => album[a.id]);
+      if(list.length < 3) list = ANIMALS.filter(a => a.hab === 'farm');
+      list = shuffle([...new Set(list)]).slice(0, 5);
+      this.list = list;
+      const sc = $('nightScene');
+      let stars = '';
+      for(let i=0;i<46;i++) stars += `<i style="left:${rnd(2,98)}%;top:${rnd(2,52)}%;animation-delay:${rnd(0,2.4).toFixed(2)}s;transform:scale(${rnd(.5,1.4).toFixed(2)})"></i>`;
+      const pos = [[20,24],[50,30],[80,24],[33,8],[67,8]];
+      sc.innerHTML = `<div class="stars">${stars}</div><div class="moon">🌜</div>
+        <svg class="nhills" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0 60 C60 20 120 30 190 55 S320 20 400 45 V100 H0Z" fill="#1B3B5E"/><path d="M0 80 C80 50 150 70 220 78 S340 55 400 70 V100 H0Z" fill="#183A44"/></svg>
+        <div class="nground"></div>` +
+        list.map((a, i) => `<div class="sleeper" data-i="${i}" style="left:${pos[i][0]}%;bottom:${pos[i][1]}%;z-index:${5+i}"><span>${a.emoji}</span><b class="zz">💤</b></div>`).join('');
+      $('nightUi').classList.remove('done');
+      $('nightHint').textContent = 'Погладь каждого пальчиком, чтобы он уснул';
+      say('Наступает ночь. Звери устали. Погладь каждого, чтобы он уснул.');
+      this.shootT = setInterval(()=> this.shoot(), 4500);
+    },
+    shoot(){
+      if(reduced) return;
+      const sc = $('nightScene'), s = document.createElement('div'); s.className = 'shooting';
+      const x = rnd(.1,.6) * sc.clientWidth, y = rnd(.05,.25) * sc.clientHeight;
+      s.style.left = x + 'px'; s.style.top = y + 'px'; sc.appendChild(s);
+      s.animate([{ transform:'rotate(18deg) translateX(0)', opacity:0 }, { opacity:1, offset:.2 }, { transform:'rotate(18deg) translateX(260px)', opacity:0 }], { duration:1100, easing:'ease-out' }).onfinish = ()=> s.remove();
+    },
+    stroke(el, amount, x, y){
+      if(el.classList.contains('asleep')) return;
+      const i = +el.dataset.i, v = (this.prog.get(i) || 0) + amount;
+      this.prog.set(i, v);
+      if(Math.floor(v / 40) > Math.floor((v - amount) / 40)){
+        const h = document.createElement('div'); h.className = 'heart'; h.textContent = pick(['❤️','💛','💜','🩷']);
+        h.style.left = (x - 12) + 'px'; h.style.top = (y - 16) + 'px'; document.body.appendChild(h);
+        h.animate([{ transform:'translateY(0) scale(.6)', opacity:1 }, { transform:`translate(${rnd(-30,30)}px,-70px) scale(1.2)`, opacity:0 }], { duration:900, easing:'ease-out' }).onfinish = ()=> h.remove();
+        tone(880 + rnd(0,300), .12, 'sine', .035);
+      }
+      if(v >= 160){
+        el.classList.add('asleep'); this.sleeping++;
+        tone(392,.5,'sine',.04); tone(330,.6,'sine',.04,.25);
+        say(`Спокойной ночи, ${this.list[i].name.toLowerCase()}!`);
+        if(this.sleeping === this.list.length) this.later(()=> this.finish(), 1600);
+      }
+    },
+    finish(){
+      this.done = true;
+      $('nightHint').textContent = 'Все уснули. Спокойной ночи! 🌙';
+      $('nightUi').classList.add('done');
+      say('Все уснули. Спокойной ночи!');
+      this.later(()=> lullaby(), 1800);
+      const sc = $('nightScene'); sc.querySelectorAll('.stars i').forEach(s => s.style.animationDuration = '1.2s');
+    }
+  };
+  (function(){
+    const sc = $('nightScene'); let down = false, lx = 0, ly = 0;
+    const at = (x, y)=>{ const e = document.elementFromPoint(x, y); return e && e.closest && e.closest('.sleeper'); };
+    sc.addEventListener('pointerdown', e=>{ down = true; lx = e.clientX; ly = e.clientY; const el = at(e.clientX, e.clientY); if(el) night.stroke(el, 45, e.clientX, e.clientY); });
+    sc.addEventListener('pointermove', e=>{
+      if(!down) return;
+      const d = Math.hypot(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY;
+      const el = at(e.clientX, e.clientY); if(el && d > 0) night.stroke(el, Math.min(d, 40), e.clientX, e.clientY);
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(t => sc.addEventListener(t, ()=> down = false));
+  })();
+  $('nightMenu').onclick = ()=>{ sfx.tap(); try{ history.replaceState({ s:'menu' }, ''); }catch(e){} show('menu'); };
+  $('nightAgain').onclick = ()=>{ sfx.tap(); night.start(); };
+
+  /* ================= ДЛЯ ВЗРОСЛЫХ ================= */
+  (function(){
+    const gate = $('gate'), hb = $('holdBtn'), fill = hb.querySelector('i');
+    let t0 = 0, raf = 0;
+    const stopHold = ()=>{ cancelAnimationFrame(raf); fill.style.width = '0'; t0 = 0; };
+    const tick = ()=>{
+      const p = Math.min(1, (performance.now() - t0) / 3000); fill.style.width = (p * 100) + '%';
+      if(p >= 1){ stopHold(); gate.classList.remove('open'); go('parent'); return; }
+      raf = requestAnimationFrame(tick);
+    };
+    hb.addEventListener('pointerdown', e=>{ e.preventDefault(); t0 = performance.now(); raf = requestAnimationFrame(tick); });
+    ['pointerup','pointerleave','pointercancel'].forEach(t => hb.addEventListener(t, stopHold));
+    $('adultBtn').onclick = ()=>{ gate.classList.add('open'); };
+    $('gateCancel').onclick = ()=>{ stopHold(); gate.classList.remove('open'); };
+  })();
+  let resetArmed = false;
+  function renderParent(){
+    const st = HABS.map(h => `${h.name}: ${'⭐'.repeat(starsBy[h.id] || 0) || '—'}`).join(' · ');
+    $('pStats').innerHTML = `Фото в альбоме: <b>${albumCount()} из ${ANIMALS.length}</b>. Редких кадров: <b>${Object.keys(gold).length}</b>.<br>${st}`;
+    $('pKid').classList.toggle('on', mode === 'kid'); $('pPro').classList.toggle('on', mode === 'pro');
+    $('pVoice').classList.toggle('on', voiceOn); $('pVoice').textContent = voiceOn ? 'Голос: вкл' : 'Голос: выкл';
+    $('pSound').classList.toggle('on', soundOn); $('pSound').textContent = soundOn ? 'Звуки: вкл' : 'Звуки: выкл';
+    resetArmed = false; $('pReset').classList.remove('armed'); $('pReset').textContent = 'Сбросить прогресс';
+  }
+  $('pKid').onclick = ()=>{ mode = 'kid'; save('fs_mode', mode); paintMode(); renderParent(); };
+  $('pPro').onclick = ()=>{ mode = 'pro'; save('fs_mode', mode); paintMode(); renderParent(); };
+  $('pVoice').onclick = ()=>{ voiceOn = !voiceOn; save('fs_voice', voiceOn); paintToggles(); renderParent(); };
+  $('pSound').onclick = ()=>{ soundOn = !soundOn; save('fs_sound', soundOn); paintToggles(); renderParent(); };
+  $('pReset').onclick = ()=>{
+    if(!resetArmed){ resetArmed = true; $('pReset').classList.add('armed'); $('pReset').textContent = 'Точно? Нажми ещё раз'; return; }
+    album = {}; gold = {}; starsBy = {}; lastShots = [];
+    ['fs_album','fs_gold','fs_stars','fs_done'].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
+    paintAlbumCount(); renderParent(); toast('Прогресс сброшен');
+  };
+
+  /* ================= МЕНЮ: КНОПКИ ================= */
+  $('playBtn').onclick = ()=>{ sfx.tap(); mapMode = 'round'; go('map'); };
+  $('freeBtn').onclick = ()=>{ sfx.tap(); mapMode = 'free'; go('map'); };
+  $('nightBtn').onclick = ()=>{ sfx.tap(); lastShots = []; go('night'); };
+
+  /* ================= СТАРТ ================= */
+  paintMode(); paintToggles(); paintAlbumCount();
+  demo.start();
+})();
+</script>
+<script>
+  if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
